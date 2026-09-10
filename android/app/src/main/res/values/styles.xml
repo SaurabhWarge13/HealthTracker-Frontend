@@ -4,6 +4,21 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <!--
+          Solid colour so the window between the splash going away and the JS
+          bundle rendering is brand-coloured instead of a white flash. Must stay a
+          plain colour: the RN root view has no background of its own, so anything
+          patterned here would bleed through transparent parts of the JS tree.
+        -->
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+
+    <!--
+      Launch theme. Differs from AppTheme only in window chrome that is visible
+      before setContentView(); MainActivity swaps back to AppTheme in onCreate.
+    -->
+    <style name="SplashTheme" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
     </style>
 
 </resources>

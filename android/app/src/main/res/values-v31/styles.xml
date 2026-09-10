@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      A qualified style REPLACES the default-bucket style of the same name, it does
+      not merge with it — so parent and every item from values/styles.xml are
+      repeated here on purpose.
+    -->
+    <style name="SplashTheme" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+
+        <!--
+          The API 31+ system splash. This is what actually renders on every
+          Android 12 and later device; the layer-list above is the pre-31 path.
+
+          Not set, deliberately:
+            windowSplashScreenIconBackgroundColor — leaving it unset selects the
+              288dp canvas / 192dp visible-circle geometry that splash_logo.png is
+              authored for. Setting it switches to 240dp/160dp and would clip.
+            android:windowOptOutEdgeToEdgeEnforcement — React Native reads this off
+              the activity theme on every launch (WindowUtil.kt) and turning it on
+              would disable edge-to-edge, moving every safe-area inset in the app.
+        -->
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+    </style>
+
+</resources>

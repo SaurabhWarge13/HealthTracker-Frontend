@@ -1,5 +1,11 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { StyleSheet, View, type View as RNView } from 'react-native';
+import {
+  InteractionManager,
+  Share,
+  StyleSheet,
+  View,
+  type View as RNView,
+} from 'react-native';
 import {
   Activity,
   AlignLeft,
@@ -8,6 +14,7 @@ import {
   Moon,
   Pencil,
   Ruler,
+  Share2,
   Trash2,
 } from 'lucide-react-native';
 import { AppDivider, AppIcon, AppScreen, AppText } from '@/components/common';
@@ -15,6 +22,7 @@ import { CheckInMissingCard, moodIcon } from '@/components/checkins';
 import { DeltaBadge, MeasurementRow } from '@/components/data';
 import { ScreenHeader, SectionCard } from '@/components/layout';
 import { AppDialog, PopoverMenu, type PopoverAnchor } from '@/components/overlays';
+import { buildCheckInLink } from '@/navigation/deepLinks';
 import {
   selectCheckInById,
   selectPreviousCheckIn,
@@ -55,6 +63,19 @@ export function CheckInDetailScreen({
       setMenuOpen(true);
     });
   }, []);
+
+  /**
+   * Deferred until the popover's own Modal has finished dismissing: iOS
+   * refuses to present the share sheet while another modal is still on screen.
+   */
+  const handleShare = useCallback(() => {
+    setMenuOpen(false);
+    InteractionManager.runAfterInteractions(() => {
+      Share.share({ message: buildCheckInLink(id) }).catch(() => {
+        // Dismissing the sheet rejects on some Android OEM builds; not a crash.
+      });
+    });
+  }, [id]);
 
   const handleDelete = useCallback(() => {
     setConfirmDelete(false);
@@ -202,6 +223,11 @@ export function CheckInDetailScreen({
         anchor={anchor}
         onDismiss={() => setMenuOpen(false)}
         items={[
+          {
+            label: 'Share',
+            icon: Share2,
+            onPress: handleShare,
+          },
           {
             label: 'Edit',
             icon: Pencil,

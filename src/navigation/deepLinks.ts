@@ -10,6 +10,14 @@ export const STASH_TTL_MS = 5 * 60 * 1000;
 // trailing slash, which some launchers and mail clients add.
 const CHECKIN_URL = /^healthtracker:\/\/\/?checkin\/([^/?#]+)\/?$/i;
 
+/**
+ * The outbound half of {@link parseDeepLink} — kept beside it so the URL
+ * format is written down once and the two stay round-trippable.
+ */
+export function buildCheckInLink(id: string): string {
+  return `healthtracker://checkin/${encodeURIComponent(id)}`;
+}
+
 /** Returns null for anything that isn't a check-in link. */
 export function parseDeepLink(url: string): DeepLinkTarget | null {
   const match = CHECKIN_URL.exec(url.trim());

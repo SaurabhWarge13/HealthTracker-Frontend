@@ -1,10 +1,27 @@
 import {
+  buildCheckInLink,
   decideDeepLink,
   isStashExpired,
   parseDeepLink,
   STASH_TTL_MS,
   type DeepLinkContext,
 } from '@/navigation/deepLinks';
+
+describe('buildCheckInLink', () => {
+  it('builds a link the parser accepts, for every id shape we store', () => {
+    for (const id of ['123', 'seed_7', 'c1b2e3f4-0000-4000-8000-000000000000']) {
+      expect(parseDeepLink(buildCheckInLink(id))).toEqual({ kind: 'checkin', id });
+    }
+  });
+
+  it('escapes an id that would otherwise break the path', () => {
+    // A slash would read as an extra segment and the parser would reject it.
+    expect(parseDeepLink(buildCheckInLink('a/b'))).toEqual({
+      kind: 'checkin',
+      id: 'a/b',
+    });
+  });
+});
 
 describe('parseDeepLink', () => {
   it('parses healthtracker://checkin/:id', () => {

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Adaptive-icon background layer. Deliberately NOT overridden in
+      values-night: launchers render the icon in their own context, so a
+      night-varying icon background would make the launcher grid inconsistent.
+    -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+
+    <!-- Splash background. Mirrors palette.page in src/theme/colors.ts. -->
+    <color name="splash_background">#EFF1F0</color>
+
+    <!--
+      What AppTheme falls back to once the splash is gone. Same colour as the
+      splash, so the gap while the JS bundle evaluates is a brand-coloured hold
+      rather than a white flash.
+    -->
+    <color name="window_background">#EFF1F0</color>
+
+</resources>

@@ -1,10 +1,6 @@
 import UIKit
 import React
 import React_RCTAppDelegate
-// RCTLinkingManager ships in its own pod (React-RCTLinking, header_dir
-// "RCTLinking"), so it needs its own module import — `import React` alone
-// does not expose it.
-import React_RCTLinking
 import ReactAppDependencyProvider
 
 @main

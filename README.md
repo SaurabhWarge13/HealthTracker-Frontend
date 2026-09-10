@@ -1,333 +1,346 @@
 # HealthTracker
 
-HealthTracker is a React Native health progress tracker. Users log daily check-ins — weight, steps, sleep, water, height, mood and notes — against personal baselines and goals, then review history, deltas and trends. Check-ins are written to local storage and queued, so logging and browsing work without a network; a sync engine pushes queued work to the backend and reconciles the server's copy when connectivity returns. On Android the app reads weight, height, steps, sleep and hydration from Health Connect (read-only) to prefill and cross-check entries.
+A React Native mobile app for tracking daily health progress. This repository contains the mobile app only; the backend API is a separate project.
 
-The backend is a separate sibling repository (`../Backend`). This README covers the mobile app only.
+## 1. About HealthTracker
 
-## Architecture
+HealthTracker helps someone track their physical progress over time by logging a short daily check-in and seeing how it compares to where they started and where they want to get to.
 
-```text
-Screens (src/screens)                    views, react-hook-form + zod
-        ↓
-Hooks / Commands                         src/hooks/*, src/store/*/*Commands.ts (thunks)
-        ↓
-Redux Toolkit + RTK Query                src/store (8 slices) + baseApi
-        ↓
-API Layer                                src/services/api (baseQuery → reauth wrapper)
-        ↓
-Backend API                              local dev server or deployed Render instance
-```
+**What it does.** A user records weight plus optional steps, sleep, water, height, mood and a note. The app turns those entries into progress against a baseline and goals — a dashboard with rings and a weight trend, a history grouped by day with day-to-day deltas, and BMI where height is known.
 
-Three subsystems hang off the store rather than sitting in the request path:
+**Who it is for.** Anyone tracking a weight or activity goal over weeks and months: someone losing or gaining weight deliberately, or keeping an eye on daily habits. It assumes one person per account.
+
+**Main user journey.**
 
 ```text
-Health Connect (Android)  →  src/services/healthConnect  →  healthConnect slice
-MMKV + Keychain           ↔  src/services/storage, src/security/tokenStore
-Outbox + sync engine      →  src/services/sync/syncEngine  ↔  sync slice
+Sign up → OTP verification → onboarding (name, optional Health Connect,
+baseline weight & height, optional goals) → dashboard → daily check-ins
+→ history & progress
 ```
 
-## What works offline
+Onboarding runs once. After that the app opens straight to the dashboard, and the daily loop is: open the app, tap add, confirm or type today's numbers, save. Saving never waits for a network — entries are stored on the device first and sent to the backend when a connection is available.
 
-| Works without a network | Requires a network |
+## 2. Tech Stack
+
+| Technology | Purpose |
 | --- | --- |
-| Viewing the dashboard, history and check-in detail from persisted local state | Sign up, OTP verification and sign in |
-| Creating, editing and deleting check-ins (written locally, queued) | The profile fetch that follows sign-in |
-| Editing profile baselines and goals (queued behind a dirty flag) | Pulling check-ins from the server |
-| Reading Health Connect data (device-local, Android) | Pushing anything queued |
-| Daily reminder notifications (scheduled locally via Notifee) | Access-token refresh |
-| Retrying or discarding failed queued work from Settings | |
+| React Native 0.86 (CLI) | The app itself. Bare CLI, not Expo; new architecture and Hermes enabled |
+| TypeScript 5.9 | Types across the whole codebase, with a `@/*` → `src/*` path alias |
+| Redux Toolkit 2.12 | Application state — 8 slices covering auth, check-ins, profile, sync, settings and more |
+| RTK Query | HTTP data fetching and caching, defined as one API with injected endpoints |
+| React Navigation 7 | Native stacks plus a bottom tab bar |
+| MMKV | Fast synchronous local storage. Holds the persisted app state, so the last session is available before the first frame renders |
+| Keychain | The OS keystore, used to store the refresh token outside app state |
+| NetInfo | Detects connectivity so the app knows when to attempt a sync |
+| React Hook Form + Zod | Form handling and validation, sharing the same schemas the domain layer uses |
+| Health Connect | Reads weight, height, steps, sleep and hydration from Android's health platform (read-only) |
+| Notifee | Schedules the local daily check-in reminder |
+| react-native-svg | Draws the progress rings and weight trend chart |
+| Jest + React Native Testing Library | Unit and integration tests |
+| Lucide icons, Toast Message, Size Matters | Icons, in-app toasts, and scaling helpers |
 
-A first sign-in needs connectivity; after that the last session is restored from local storage on launch, so a cold start with no network shows local data but cannot reach the server until it returns. Logout is a local teardown and the server call is best-effort, but Settings warns first when unsynced work exists.
+Requires Node `>= 22.11.0`. Yarn is the package manager.
 
-## Tech stack
+## 3. Health Connect
 
-Bare React Native CLI — not Expo. New architecture and Hermes are enabled.
+**What the user sees.** On Android, the app can connect to Health Connect and use data other apps and devices already record there. Today's steps, sleep and water appear on the dashboard, and weight from a smart scale can prefill a check-in or prompt the user that a newer reading exists. Connecting is optional; the app is fully usable without it.
 
-| Package | Version | Role |
+**Important boundaries, stated plainly:**
+
+- **Android only.** Health Connect is an Android platform feature.
+- **Read-only.** The app requests five read permissions — weight, height, steps, sleep and hydration — and never writes anything back.
+- **Raw device data is not uploaded to the backend.** Health Connect readings stay on the device. What reaches the server is the check-in the user saved.
+- **Health Connect can prefill or nudge, never overwrite.** A prefilled number is a suggestion. The user's own most recent check-in wins over a stale device reading, and editing a field marks it as manually entered.
+- **User-entered values remain authoritative.** A saved check-in is what the user reported, even if a field started as a device reading.
+- **iOS has no HealthKit integration.** On iOS the Health Connect UI is hidden entirely and all values are entered manually.
+- **No historical backfill.** Connecting on a new device reads that device's current data. Past Health Connect history is not imported or transferred.
+- **Permissions are device-specific.** Granting access on one phone does not grant it on another; each device asks separately.
+
+The key distinction:
+
+| | Where it lives | Does it sync? |
 | --- | --- | --- |
-| `react-native` / `react` | 0.86.3 / 19.2.3 | Runtime |
-| `typescript` | ~5.9 | Types; `@/*` → `./src/*` path alias |
-| `@reduxjs/toolkit` | 2.12 | State, plus RTK Query via `@reduxjs/toolkit/query/react` |
-| `react-redux` | 9.3 | Bindings (typed `useAppDispatch` / `useAppSelector`) |
-| `@react-navigation/*` | 7 | native-stack + bottom-tabs |
-| `react-native-health-connect` | 4.1 | Android Health Connect reads |
-| `react-native-mmkv` | 3.3 | Synchronous local storage (state persistence) |
-| `react-native-keychain` | 10 | OS keystore for the refresh token |
-| `@react-native-community/netinfo` | 12 | Connectivity detection |
-| `react-hook-form` + `zod` | 7.87 + 4.5 | Forms and validation (`@hookform/resolvers`) |
-| `@notifee/react-native` | 9.1 | Local reminder notifications |
-| `react-native-svg` | 15 | Progress rings and trend charts |
-| `lucide-react-native` | 1.41 | Icons |
-| `react-native-toast-message` | 2.5 | Toasts |
-| `react-native-gesture-handler` / `screens` / `safe-area-context` | 3 / 4.27 / 5.9 | Navigation primitives |
-| `react-native-size-matters` | 0.4 | Scaling helpers |
+| **Raw Health Connect data** | Device-local, owned by the Android platform | No — never sent to the backend |
+| **A saved check-in** | Application data | Yes — syncs to the backend and appears on other devices |
 
-Dev tooling: Jest 29 + `@testing-library/react-native` 14, ESLint 8 (`@react-native` config), Prettier 2.8.8, `react-native-dotenv`, `babel-plugin-module-resolver`.
+The one exception worth naming precisely: a saved check-in includes a small label per field recording whether that number came from Health Connect or was typed manually. That is a provenance label, not health data — no readings, samples, timestamps or device details are sent.
 
-Node `>= 22.11.0` (`engines`). Yarn is the package manager (`yarn.lock`; no `package-lock.json`).
+Availability is treated as a ladder rather than an on/off switch ([src/domain/healthConnect/provider.ts](src/domain/healthConnect/provider.ts)): available, update required, provider missing, provider disabled, or unsupported. Each recoverable state offers the matching action — install the provider, update it, or open its settings — instead of a generic error. Connection state is likewise three-valued, because a user can grant some data types and refuse others.
 
-## Project structure
+## 4. Core Functionality
 
-```text
-src/
-  assets/fonts/     Plus Jakarta Sans (linked via react-native.config.js)
-  components/       common/ data/ layout/ forms/ overlays/ toast/ + feature folders
-  config/env.ts     API base URL resolution and startup validation
-  context/          ThemeContext (light/dark tokens)
-  domain/           pure logic — no React, no Redux
-  hooks/            sync, connectivity, health connect, deep links, sign-in, toasts
-  navigation/       RootNavigator, three stacks, tab navigator, deep-link parsing
-  screens/          auth/ onboarding/ dashboard/ checkins/ settings/
-  security/         tokenStore (Keychain wrapper)
-  services/         api/ healthConnect/ network/ notifications/ storage/ sync/
-  store/            8 slices, each with selectors; two *Commands.ts thunk modules
-  theme/            colors, typography, spacing, radius
-  types/            navigation param lists, @env declarations
-  utils/            formatters, local id generation
-```
+**Authentication.** Sign up with email and password, then verify with a one-time code. Sign in and sign out from Settings. Passwords and codes are validated on-device before any request is sent.
 
-The layering is deliberate and is the fastest way to read the codebase:
+**OTP verification.** Sign-up parks the credentials; the account is actually created when the code is verified. The code auto-submits once the last digit is entered.
 
-- **`domain/`** holds pure functions with no React and no Redux — validation schemas, sync merge rules and backoff, reconciliation, BMI/progress/trend maths, Health Connect availability rules, API error taxonomy. This is where most of the interesting logic lives, and it is directly unit-testable.
-- **`services/`** owns all I/O — HTTP, Health Connect, MMKV, Keychain, NetInfo, Notifee.
-- **`store/`** owns state. Screens read selectors and dispatch commands; they do not call services directly.
+**Onboarding.** A four-step guided setup: name, an optional Health Connect connection, a required baseline (weight and height), and optional goals. If it is interrupted, it resumes at the step the user left off.
 
-App shell composition ([App.tsx:19-27](App.tsx#L19-L27)):
+**Baseline and goals.** Baseline weight and height anchor progress and BMI. Optional goals — daily steps, water, sleep, and a target weight — drive the dashboard rings and attainment. All are editable later from Settings.
+
+**Dashboard.** Progress toward the target weight, attainment against goals, BMI, a weight trend chart, rings for today's steps, sleep and water, and recent check-ins. Banners surface being offline, a failed refresh, or a newer weight reading from Health Connect.
+
+**Check-ins.** Create, edit and delete. Weight is required; steps, sleep, water, height, mood (five faces) and notes are optional. Fields prefilled from Health Connect are marked as such until edited. Multiple check-ins on the same day are kept as separate entries, ordered by time.
+
+**History.** All check-ins grouped by day with month separators, each showing the change since the previous entry, plus goal chips that jump straight to editing that goal.
+
+**Profile and settings.** Name and email, baseline and goals, Health Connect status per data type, the daily reminder, sync status, and sign-out.
+
+**Reminders.** An optional daily check-in reminder at 8:00 PM, scheduled locally on the device. It works without a network and does not depend on a push service.
+
+**Deep links.** `healthtracker://checkin/<id>` opens a specific check-in. A check-in can be shared as a link from its detail screen. A link tapped while signed out is held briefly and opened after sign-in rather than being lost, and a link to something that no longer exists lands on a clear "not found" screen instead of an error.
+
+**Sync status, retry and discard.** Settings shows how many changes are waiting to sync. Anything that failed permanently is listed individually with the reason and two choices: retry it, or discard it and revert that change locally. Nothing is dropped silently, and signing out warns first if work is still unsynced.
+
+## 5. Offline-first
+
+**What the user experiences.** The app opens and works with no connection. Previously loaded check-ins and profile data are there, new check-ins can be added and edited, and everything looks immediately saved — because it is, locally. When the connection returns, queued changes are sent in the background.
 
 ```text
-GestureHandlerRootView → Provider (redux) → SafeAreaProvider → ThemeProvider → RootNavigator
+User saves a check-in
+        ↓
+Written to local state + queued        ← visible immediately, no waiting
+        ↓
+Persisted to device storage (MMKV)     ← survives closing the app
+        ↓
+   [ offline ]  → shown as pending, stays queued
+        ↓
+Connection returns
+        ↓
+Queue is sent to the backend           ← retried with backoff on failure
+        ↓
+Server copy reconciled with local      ← no duplicates, local edits preserved
 ```
 
-MMKV hydration happens in [src/store/store.ts](src/store/store.ts) before the first render, and [index.js](index.js) registers the Notifee background handler at module scope, before `AppRegistry.registerComponent`.
+**Works without a network:** viewing previously loaded dashboard, history and check-in detail; creating, editing and deleting check-ins; editing baseline and goals; reading Health Connect data; the daily reminder; and retrying or discarding failed items.
 
-## Navigation
+**Requires a network:** sign up, OTP verification, sign in, the profile fetch that follows sign-in, sending queued changes, fetching check-ins from the server, and refreshing the access token. A first sign-in therefore needs connectivity; after that, launches work offline.
 
-The root picks one of three stacks from two selectors ([src/navigation/RootNavigator.tsx:39-43](src/navigation/RootNavigator.tsx#L39-L43)):
+**How it works.** Writes go through a small commands layer ([src/store/checkins/checkinsCommands.ts](src/store/checkins/checkinsCommands.ts)) rather than direct API calls: the app generates a local id, updates state immediately, and adds an operation to an outbox queue held in the sync slice. Each queued operation carries the complete check-in, an attempt count, a next-attempt time, and the value to revert to if discarded. Operations for the same entry are merged, so editing one check-in repeatedly while offline leaves one queued operation rather than many.
 
-```ts
-const activeStack = !hasSession ? 'auth' : !profileComplete ? 'onboarding' : 'main';
+The sync engine ([src/services/sync/syncEngine.ts](src/services/sync/syncEngine.ts)) pushes the profile, drains the queue, then fetches check-ins — push before pull, so the server has the device's changes before the device reads back. Creates carry a client id so a repeated attempt updates the same record instead of creating a second one. Retryable failures back off exponentially with jitter up to a bounded number of attempts; permanent failures stop and surface in Settings.
+
+Reconciliation re-keys server rows onto local ids and overlays anything still queued, so a check-in created offline never appears twice and server data never overwrites an unsent local edit. A failed fetch leaves local data untouched. Sync is triggered by sign-in, connectivity changes, a newly queued change, app foreground, and a timer for the next scheduled retry ([src/hooks/useSync.ts](src/hooks/useSync.ts)).
+
+State is persisted to MMKV by a small hand-written layer ([src/services/storage/persistence.ts](src/services/storage/persistence.ts)) rather than a library, because MMKV reads synchronously — the store is created already holding the last session, so the app opens on the right screen with no loading gate.
+
+## 6. Authentication & Security
+
+**In plain terms.** Signing in gives the app two tokens. The short-lived one is kept only in memory, so it is never written to disk. The long-lived one is stored in the device's own secure keystore. If the short-lived token expires mid-use, the app quietly gets a new one and retries the request — the user sees nothing.
+
+- **Access token stays in memory.** It is held in app state and deliberately stripped before every write to local storage, so it never reaches disk.
+- **Refresh token is stored in the OS keystore** via Keychain ([src/security/tokenStore.ts](src/security/tokenStore.ts)). If the keystore is unavailable, that reads as "no token" and the user simply signs in again — it never crashes.
+- **401 → refresh → replay once** ([src/services/api/baseQueryWithReauth.ts](src/services/api/baseQueryWithReauth.ts)). Only genuine token errors trigger a refresh; a wrong password is an answer, not an expired session. Because the refresh token rotates on every use, refreshes run behind a single-flight lock — two concurrent refreshes would invalidate each other and sign out a healthy session. The original request is replayed exactly once.
+- **No token is restored at launch.** The access token is intentionally not persisted, so the first request after opening the app refreshes on demand. One code path instead of a special startup sequence.
+- **Explicit logout clears account-scoped local data.** Signing out resets every account slice, clears the keystore and drops persisted state.
+- **Session expiry preserves unsynced work.** An expired session keeps local check-ins and the user's identity, so nothing waiting to sync is lost and the app can say whose data it is. The user is told what happened and signs back in.
+- **Session fencing prevents stale responses crossing accounts.** A counter increments on every session change, and the sync engine checks it before writing a response. A reply that arrives after a sign-out cannot land in the next user's account.
+- **Account isolation.** Signing in as a different user on the same device clears the previous account's local data before the new session starts.
+
+No secrets are stored in this repository. Environment values are configuration, not credentials.
+
+## 7. Device-to-Device Behavior
+
+This describes how the app **currently behaves in the demo**, so there are no surprises during a walkthrough. These are known characteristics, not defects.
+
+**Android → Android** (signing in on a second Android device):
+
+- Check-in history transfers — it is server-backed.
+- Profile, baseline and goals transfer.
+- Raw Health Connect data does not transfer through the backend.
+- The new device reads Health Connect from its own device, and asks for its own permissions.
+- There is no historical Health Connect backfill; only data present on that device is read.
+- The backend keeps **one active refresh token per account**, so signing in on a second device ends the first device's session — the first device is signed out the next time it needs to refresh, and is told the account was used on another device.
+- Same-day check-ins created on different devices remain **separate records**. Entries are identified individually and ordered by time, so there is no automatic same-day merge.
+
+**Android → iOS:**
+
+- Existing check-in history transfers.
+- Profile, baseline and goals transfer.
+- Health Connect is unavailable — it is an Android platform feature.
+- HealthKit is not currently implemented.
+- Health values are entered manually on iOS.
+
+## 8. Current Demo Limitations
+
+| Limitation | Detail |
+| --- | --- |
+| Single active session per account | The backend stores one refresh token per user, so a new sign-in ends the previous device's session |
+| Health Connect is Android-only | No health platform integration on iOS |
+| No HealthKit | iOS has no automatic health data source; values are entered manually |
+| No Health Connect historical backfill | A newly connected device reads current data only |
+| No cross-device raw health data sync | Health Connect readings stay on the device that read them |
+| Possible same-day duplicates across devices | Two devices can each create a check-in for the same day; there is no server-side same-day merge |
+| Demo backend persistence | The backend runs SQLite from a file on a free hosting tier with no persistent disk, so data resets when the service redeploys, restarts or spins down after inactivity |
+| Fixed verification code | The demo backend issues a fixed OTP rather than emailing one |
+| Debug-signed release APK | The release build type still uses the debug signing config, which is fine for sideloading but not for store distribution |
+| No offline sign-in | The first sign-in on a device needs connectivity |
+| No local state migrations | Persisted local state is versioned; bumping the version drops the stored copy rather than migrating it |
+| No E2E test layer | Testing is unit and integration only |
+
+## 9. How These Limitations Could Be Handled in Production
+
+These are product-dependent architectural choices, not gaps that the demo needs in order to work. Each has a well-understood production answer:
+
+- **Multi-device sessions** — replace the single refresh token per user with a sessions/devices table, one row per device, so several devices stay signed in and can be revoked individually.
+- **Health data synchronization** — if the business genuinely needs health data server-side, model it explicitly with user consent, a defined retention policy and per-source records, rather than implying it from check-ins.
+- **HealthKit** — add an iOS provider behind the same interface the Health Connect service already sits behind, so the rest of the app is unchanged.
+- **Cross-device duplicate handling** — decide the rule at the product level (one check-in per day, or many), then enforce it server-side with a uniqueness constraint or a merge strategy.
+- **Production storage** — a managed persistent database instead of a file-based one, with backups and migrations.
+- **Stronger synchronization** — incremental, cursor-based sync so a device fetches only what changed, plus explicit conflict resolution for concurrent edits.
+- **Historical import** — a one-off consented backfill job if importing a user's past health history is a requirement.
+
+## 10. Architecture
+
+```text
+Screens
+   ↓
+Hooks / Commands
+   ↓
+Redux Toolkit + RTK Query
+   ↓
+Services
+   ↓
+Backend API
 ```
 
-No `navigate()` call ever changes stacks — stack choice is derived state, so an expired session or a completed onboarding step swaps the tree on the next render.
+Four layers, each with one job:
 
-| Navigator | Routes |
+- **`domain/`** — pure business logic. No React, no Redux, no I/O: validation rules, sync merge and backoff, reconciliation, BMI and progress maths, Health Connect availability rules, error classification. Directly unit-testable, and where most of the real logic lives.
+- **`services/`** — everything external: HTTP, Health Connect, MMKV, Keychain, connectivity, notifications.
+- **`store/`** — application state. Slices with their selectors, plus two thin command modules for actions that need to coordinate more than one slice.
+- **`screens/` and `components/`** — UI. Screens read selectors and dispatch commands; they do not call services directly.
+
+Navigation reflects session state rather than being driven imperatively ([src/navigation/RootNavigator.tsx](src/navigation/RootNavigator.tsx)): one of three stacks is chosen from two pieces of state — signed out shows auth, signed in but not onboarded shows onboarding, otherwise the main app. No navigation call ever switches between them.
+
+The app shell composes as gesture root → Redux provider → safe area → theme → navigation ([App.tsx](App.tsx)), with local state loaded before the first render.
+
+## 11. API / Backend Integration
+
+The app talks to a REST API over RTK Query. All endpoints are declared in one API definition with paths centralised in [src/services/api/apiConfig.ts](src/services/api/apiConfig.ts).
+
+| Purpose | Method and path |
 | --- | --- |
-| `AuthStack` | Login, Signup, VerifyOtp |
-| `OnboardingStack` | Name, HealthConnect, Baseline, Goals — initial route resumes an interrupted setup |
-| `MainStack` | Tabs, CheckInForm (modal), CheckInDetail, CheckInNotFound, EditProfileField (modal) |
-| `BottomTabNavigator` | Home, History, Settings (custom tab bar) |
+| Sign up | `POST /auth/signup` |
+| Verify OTP | `POST /auth/verify-otp` |
+| Sign in | `POST /auth/login` |
+| Refresh tokens | `POST /auth/refresh` |
+| Sign out | `POST /auth/logout` |
+| Get profile | `GET /profile` |
+| Update profile | `PUT /profile` |
+| List check-ins | `GET /checkins` |
+| Create check-in | `POST /checkins` |
+| Update check-in | `PUT /checkins/:id` |
+| Delete check-in | `DELETE /checkins/:id` |
 
-- **Auth** — email/password sign-in and sign-up, then OTP verification.
-- **Onboarding** — name, optional Health Connect connection, required baseline (weight + height), optional goals. Completing it is what flips the root to `main`.
-- **Dashboard (Home)** — progress and attainment, BMI, weight trend chart, steps/sleep/water rings, recent check-ins, plus connectivity and sync banners.
-- **History** — check-ins grouped by day with month separators and deltas against the previous entry.
-- **Check-in form / detail** — create, edit, view and delete a single check-in.
-- **Settings** — profile, baselines and goals, Health Connect status per data type, the daily reminder, pending and failed sync work with Retry/Discard, and logout.
+Every authenticated request carries a bearer token attached automatically; sign-up, OTP, sign-in and refresh never do. Requests time out after 15 seconds so a dead server fails visibly rather than hanging.
 
-The four app-wide hooks (`useHealthConnectResume`, `useNotificationSchedule`, `useConnectivity`, `useSync`) are mounted in `MainStack` because that is the authenticated boundary. The single `<Toast>` host sits outside the stacks, inside `NavigationContainer`, so a toast raised at sign-in survives the auth→main swap.
+`POST /auth/refresh` is not exposed as a normal endpoint — it is called by the **reauth wrapper**, which sits in front of every request. On a genuine token error it refreshes once, behind a single-flight lock, and replays the original request; if the refresh fails, the session ends cleanly.
 
-**Deep linking** uses the scheme `healthtracker://checkin/:id`, registered in `AndroidManifest.xml` and `ios/HealthTracker/Info.plist`. It is hand-rolled in [src/navigation/deepLinks.ts](src/navigation/deepLinks.ts) and [src/hooks/useDeepLinks.ts](src/hooks/useDeepLinks.ts) rather than using `NavigationContainer`'s `linking` prop, so a URL can be parsed before the auth gate and stashed with a TTL across sign-in instead of being dropped.
+Reads use RTK Query's cache and tags. Check-in writes are deliberately different: they are invoked by the sync engine rather than from screens, and carry no cache invalidation, because the engine owns ordering, retries and reconciliation and would otherwise fight a tag-driven refetch. Server errors are normalised once into a small set of kinds ([src/domain/api/errors.ts](src/domain/api/errors.ts)), so only transport-shaped failures are retried and user-facing messages never leak status codes.
 
-## Authentication and session handling
-
-**Token split.** The access token lives in Redux memory only and is stripped before every persist write ([src/services/storage/persistence.ts](src/services/storage/persistence.ts)). The refresh token lives in the OS keystore via `react-native-keychain` ([src/security/tokenStore.ts](src/security/tokenStore.ts)). There is no AsyncStorage in the project. Every keystore call is failure-tolerant: an unavailable keystore reads as "no token" and lands the user on Login rather than crashing.
-
-**Sign-up is two steps.** `POST /auth/signup` parks credentials and starts no session; the account is created and the session begins at `POST /auth/verify-otp`. Sign-in and OTP verification both funnel into `establishSession` ([src/hooks/useSignIn.ts](src/hooks/useSignIn.ts)), whose order is load-bearing: save the refresh token → clear the previous account's local data if the user id differs → put the access token in state → fetch the profile (a 404 means onboarding) → start the session, which is the dispatch that swaps navigators.
-
-**Cold start.** MMKV is read synchronously before the store is created, so `hasSession` is already correct on the first frame and Login never flashes. The access token is deliberately not restored and there is no bootstrap refresh call: the first authenticated request goes out without a bearer token, the server answers 401, and the reauth wrapper refreshes and replays it. One auth path instead of a separate boot sequence.
-
-**401 refresh** ([src/services/api/baseQueryWithReauth.ts](src/services/api/baseQueryWithReauth.ts)). A refresh is attempted only on 401, only for authenticated paths, and only for refreshable error codes — a wrong password is an answer, not an expired session, so it never triggers one. The refresh runs behind a module-scope single-flight latch, which is a correctness requirement rather than an optimisation because the refresh token rotates on every use. The original request is then replayed exactly once; a failed refresh ends the session.
-
-**Expiry versus logout** ([src/store/auth/authSlice.ts](src/store/auth/authSlice.ts)). An expired session clears credentials but keeps the user id, email and all local data, so unsynced work survives and the app can say whose it is. `loggedOut` is the single teardown action: every account-scoped slice resets through `extraReducers` and the persisted state is dropped. A `sessionEpoch` counter is bumped on every transition and used by the sync engine as a fence, so a response from a finished session cannot be written into a live one.
-
-Full state-by-state walkthrough: [docs/AUTH_FLOW.md](docs/AUTH_FLOW.md).
-
-## Health Connect (Android)
-
-Read-only, Android-only, via `react-native-health-connect`. Nothing is ever written back. `minSdkVersion` is 26, since Health Connect requires Android 8.0+.
-
-| App field | Health Connect record type |
-| --- | --- |
-| weight | `Weight` |
-| height | `Height` |
-| steps | `Steps` |
-| sleep | `SleepSession` |
-| water | `Hydration` |
-
-Five read permissions, no write permissions and no heart rate.
-
-**Availability is a ladder, not a boolean** ([src/domain/healthConnect/provider.ts](src/domain/healthConnect/provider.ts)): `AVAILABLE`, `UPDATE_REQUIRED`, `PROVIDER_MISSING`, `PROVIDER_DISABLED` or `NOT_SUPPORTED`. Each recoverable state maps to a specific call to action — install the provider, update it, or open its settings — instead of a generic failure message. Connection status is likewise three-valued: not connected, partially connected, connected, because a user can grant some data types and refuse others.
-
-**iOS.** The native module resolves its TurboModule at import time and throws off Android, so it is lazily required behind a platform guard and every function returns a safe default ([src/services/healthConnect/healthConnectService.ts](src/services/healthConnect/healthConnectService.ts)). Availability reports `NOT_SUPPORTED`, and the Health Connect UI is hidden rather than shown as dead controls. HealthKit is not used, so iOS has no device data source.
-
-**Where readings surface.** Dashboard steps/sleep/water rings, a weight nudge banner, check-in form prefill, and onboarding baseline prefill. Device readings only prefill or nudge — they never overwrite a value the user entered, the user's own most recent check-in wins over a stale device reading, and the form tracks per field whether a number came from Health Connect or was typed.
-
-Permissions are requested only on an explicit user tap; a silent re-read runs on mount and on every foreground. Revoking access is handed to system settings, since the platform only applies an in-app revoke after a process restart.
-
-Permission model, read windows, aggregation rules and per-state UI: [docs/HEALTH_CONNECT.md](docs/HEALTH_CONNECT.md), [docs/HEALTH_CONNECT_PERMISSIONS.md](docs/HEALTH_CONNECT_PERMISSIONS.md), [docs/HEALTH_CONNECT_EXPLAINED.md](docs/HEALTH_CONNECT_EXPLAINED.md).
-
-## Offline-first data and sync
-
-**Local storage.** A single MMKV instance sits behind a three-method interface, with an in-memory fallback if it fails to construct — the app runs, it just does not persist ([src/services/storage/mmkv.ts](src/services/storage/mmkv.ts)). Persistence is hand-written rather than redux-persist: MMKV reads synchronously, so the store is created already holding the last session. Writes are debounced and flushed when the app backgrounds. The `auth`, `checkins`, `onboarding`, `profile`, `settings` and `sync` slices persist; the RTK Query cache, connectivity and Health Connect state deliberately do not — the latter two are re-derived from the device, and a value restored from disk would be a guess.
-
-**Writes are local-first.** Check-ins go through a commands layer of thunks ([src/store/checkins/checkinsCommands.ts](src/store/checkins/checkinsCommands.ts)) rather than RTK Query mutation hooks: the app mints a local id, updates state immediately, and enqueues an operation. The form saves and navigates back without awaiting anything.
-
-**The outbox** is an ordered queue of pending operations (create, update, delete) held in the `sync` slice. Each carries the complete check-in rather than a diff, an attempt count, a next-attempt time, and the value to revert to if the user discards it. Operations targeting the same entity are merged, so editing the same check-in ten times offline leaves one queued operation rather than ten.
-
-**The sync engine** ([src/services/sync/syncEngine.ts](src/services/sync/syncEngine.ts)) pushes the profile, drains the queue, then pulls check-ins — push before pull, so the server has the device's changes before the device reads it back. Creates carry a client id so the server upserts, which makes a repeated attempt safe. Retryable failures back off exponentially with jitter up to a bounded number of attempts; an operation that fails permanently stays visible in Settings with Retry and Discard rather than being dropped silently.
-
-**Reconciliation.** Server rows are re-keyed onto local ids, so a check-in created offline never appears twice, and queued work is overlaid on top of the server snapshot — server data never overwrites something still waiting to sync. Local ids are never rewritten once a server id is learned, so open screens, deep links and queued operations stay valid. A failed pull leaves local data untouched.
-
-**Sync triggers** ([src/hooks/useSync.ts](src/hooks/useSync.ts)): sign-in and connectivity changes, a newly queued operation, app foreground, and a timer for the next scheduled retry. All are safe to overlap, because the engine holds its own single-flight latches.
-
-Lifecycle of a check-in created with no network:
-
-1. Saved to local state and enqueued in one step; the UI updates immediately and the form closes.
-2. Persisted to MMKV within 250 ms, so it survives process death.
-3. Shown as pending in the dashboard and history; logout warns while it is unsynced.
-4. Connectivity returns — transient failures are revived, then the queue drains.
-5. On success the server id is recorded against the local id; the local id is not rewritten.
-6. The next pull re-keys the server row onto the local id via its client id, so no duplicate appears.
-
-Operation model, merge rules, backoff, failure matrix and the id-map lifecycle: [docs/CHECKIN_SYNC.md](docs/CHECKIN_SYNC.md), [docs/SERVER_ID_MAPPING.md](docs/SERVER_ID_MAPPING.md).
-
-## API layer
-
-One `createApi` ([src/services/api/baseApi.ts](src/services/api/baseApi.ts)) with `reducerPath: 'api'`, the reauth base query, tag types `Profile` and `CheckIns`, and no inline endpoints — feature files inject them. Paths are centralised in [src/services/api/apiConfig.ts](src/services/api/apiConfig.ts).
-
-| Endpoint | Kind | Method and path | Tags |
-| --- | --- | --- | --- |
-| `signup` | mutation | `POST /auth/signup` | — |
-| `verifyOtp` | mutation | `POST /auth/verify-otp` | — |
-| `login` | mutation | `POST /auth/login` | — |
-| `logout` | mutation | `POST /auth/logout` | — |
-| `getProfile` | query | `GET /profile` | provides `Profile` |
-| `updateProfile` | mutation | `PUT /profile` | invalidates `Profile` |
-| `listCheckIns` | query | `GET /checkins` | provides `CheckIns` |
-| `createCheckIn` | mutation | `POST /checkins` | — |
-| `updateCheckIn` | mutation | `PUT /checkins/:id` | — |
-| `deleteCheckIn` | mutation | `DELETE /checkins/:id` | — |
-
-`POST /auth/refresh` is called directly by the reauth wrapper rather than being an endpoint.
-
-Note the deliberate asymmetry: check-in mutations declare no `invalidatesTags` and are invoked imperatively by the sync engine, because the engine owns ordering, retries and reconciliation and would fight a tag-driven refetch. Only `Profile` uses tag invalidation.
-
-`prepareHeaders` ([src/services/api/baseQuery.ts](src/services/api/baseQuery.ts)) sets `Accept` and an `X-App-Platform` header, and attaches `Authorization: Bearer …` from state for every endpoint outside the unauthenticated set. Requests time out after 15 seconds, so a dead server fails visibly instead of leaving a spinner running.
-
-Errors are normalised once ([src/domain/api/errors.ts](src/domain/api/errors.ts)): server codes map to error kinds, only transport-shaped kinds are retryable, and user-facing messages never leak status codes.
-
-## Backend configuration (local or Render)
-
-Three keys in `.env`, loaded by `react-native-dotenv` as the `@env` module and resolved in [src/config/env.ts](src/config/env.ts):
-
-| Key | Meaning |
-| --- | --- |
-| `API_MODE` | Exactly `server` or `local` — nothing else is accepted |
-| `SERVER_URL` | The deployed Render backend. Must be `https://` |
-| `LOCAL_URL` | A backend running on your own machine |
-
-`API_MODE` selects the URL. There is no `__DEV__` switching and no automatic host rewriting — `10.0.2.2` is simply what you put in `LOCAL_URL`:
-
-| Target | `LOCAL_URL` |
-| --- | --- |
-| Android emulator | `http://10.0.2.2:3000` (the emulator's alias for the host machine) |
-| iOS simulator | `http://localhost:3000` |
-| Physical device | `http://<your-LAN-IP>:3000` |
-
-Configuration **fails fast at startup**: a missing or misspelled `API_MODE`, an empty URL, the unfilled `https://<your-render-url>` placeholder, or a URL with no scheme throws with a message telling you what to fix. An APK silently pointing at localhost is indistinguishable from a server that is down, so it refuses to guess. Trailing slashes are stripped. In development the resolved base URL is logged once, and `API_MODE=server` with an `http://` URL warns, because release builds block cleartext traffic.
-
-These values are **inlined by Babel at build time**, so editing `.env` requires `yarn start --reset-cache` — a plain reload keeps serving the old ones. `.env` is gitignored; `.env.example` is the committed template.
-
-## Getting started
-
-Prerequisites: Node `>= 22.11.0`, Yarn, a JDK and the Android SDK (compile/target 36, build tools 36.0.0, NDK 27.1.12297006), and an API 26+ emulator or device. For iOS, Xcode plus `bundle install && bundle exec pod install` in `ios/`.
-
-```bash
-yarn install
-
-# Configure the backend
-cp .env.example .env
-# Then either:
-#   API_MODE=local   and LOCAL_URL pointing at ../Backend on this machine
-#   API_MODE=server  and SERVER_URL set to the deployed Render URL
-
-yarn start           # Metro
-yarn android         # build, install and run (separate terminal)
-yarn ios             # iOS, if pods are installed
-```
-
-Health Connect features need the Health Connect provider present on the device; on Android 14+ it is part of the platform, and on older versions it is a Play Store app. After changing anything in `src/assets/fonts`, run `yarn react-native-asset` to re-link.
-
-## Testing
+## 12. Testing
 
 ```bash
 yarn test              # Jest
-yarn test --coverage   # no thresholds are configured, so ask for it explicitly
-yarn lint              # ESLint
-npx tsc --noEmit       # type check (there is no typecheck script)
+yarn test --coverage    # no thresholds configured, so request it explicitly
+yarn lint               # ESLint
+npx tsc --noEmit        # type check (there is no typecheck script)
 ```
 
-30 suites live under `__tests__/`, mirroring the source layout:
+30 test suites run under Jest with React Native Testing Library, mirroring the source layout:
 
-| Group | Suites | Covers |
+| Group | Suites | What is covered |
 | --- | --- | --- |
-| `domain/` | 8 | Pure logic — auth/check-in/profile validation, sync merge rules and backoff, reconciliation, Health Connect availability across API levels, attainment, notification scheduling, the API error taxonomy |
-| `store/` | 9 | Reducer and selector behaviour, including logout teardown across every account-scoped slice and expiry preserving unsynced work |
-| `services/` | 4 | Sync engine, persistence, the reauth wrapper, DTO mapping |
+| `domain/` | 8 | Auth, check-in and profile validation; sync merge rules and backoff; reconciliation; Health Connect availability across Android versions; goal attainment; reminder scheduling; API error classification |
+| `store/` | 9 | Reducer and selector behaviour, including logout clearing every account-scoped slice and session expiry preserving unsynced work |
+| `services/` | 4 | The sync engine, local persistence, the reauth wrapper, and request/response mapping |
 | `components/` | 6 | Inputs, OTP entry, mood picker, check-in and attainment rows, toasts |
-| `navigation/`, `utils/`, root | 3 | Deep-link parsing and gating, local-day keys, an app smoke render |
+| `navigation/`, `utils/`, root | 3 | Deep-link parsing and gating, local-day grouping, and an app smoke render |
 
-The approach favours integration over isolation where it matters: the sync-engine suite mocks only the raw base query and the token store, so RTK Query endpoints, the reauth wrapper, error normalisation and every reducer run for real against a live store. `jest.setup.js` mocks NetInfo, toasts and Notifee — including its enums, which are consumed as values — while MMKV runs against its own in-memory store under Jest.
+The emphasis is on business logic rather than screen snapshots. The sync engine suite is the clearest example: it mocks only the network transport and the keystore, so the real endpoints, the real reauth wrapper, real error handling and every real reducer run against a live store. It covers deleting something already gone, falling back when a server id was never learned, session fencing, and a failed fetch leaving local data intact.
 
-There is no E2E layer (no Detox, no Maestro).
+There is currently **no E2E framework** (no Detox or Maestro).
 
-## Building the APK
+## 13. Environment & Setup
+
+**Requirements:** Node `>= 22.11.0`, Yarn, a JDK and the Android SDK, and an Android 8.0+ (API 26) emulator or device. For iOS, Xcode plus CocoaPods (`bundle install && bundle exec pod install` in `ios/`).
 
 ```bash
-# Debug
-yarn android
-cd android && ./gradlew assembleDebug     # → android/app/build/outputs/apk/debug/app-debug.apk
-
-# Release
-cd android && ./gradlew assembleRelease   # → android/app/build/outputs/apk/release/app-release.apk
-cd android && ./gradlew bundleRelease     # → android/app/build/outputs/bundle/release/app-release.aab
+yarn install
+cp .env.example .env    # then edit it, see below
+yarn start              # Metro
+yarn android            # build, install and run (separate terminal)
 ```
 
-`applicationId com.healthtracker`, `versionCode 1`, `versionName 1.0`. Hermes and the new architecture are on, ProGuard is off, ABIs are `armeabi-v7a, arm64-v8a, x86, x86_64`, Gradle wrapper 9.3.1.
+**Configuration.** Three values in `.env` at the project root, resolved in [src/config/env.ts](src/config/env.ts):
 
-Two things to know before building something you intend to hand to someone:
-
-- `.env` is baked into the bundle at build time, so a release APK carries whatever `API_MODE` and URL were set when it was bundled. A build that has to run away from your dev machine needs `API_MODE=server` with an `https://` URL.
-- `buildTypes.release` currently uses the debug `signingConfig`, so `assembleRelease` produces a debug-signed APK. That is fine for sideloading; a release keystore has to be configured before store distribution.
-
-## Design trade-offs
-
-**Hand-written MMKV persistence instead of redux-persist.** MMKV reads synchronously, so the store is constructed already holding the last session and the navigator picks the right stack on the first frame — no rehydration gate, no Login flash. The cost is no migration framework: bumping the schema version drops the stored state rather than migrating it.
-
-**Thunks for writes, RTK Query for reads.** A check-in must be saved and queued without awaiting a network, and retries, ordering and reconciliation belong to the sync engine. So writes go through a commands layer and the engine calls mutation endpoints imperatively. The consequence is that check-in mutations carry no tag invalidation, and the engine — not RTK Query — owns cache correctness.
-
-**Access token in memory, refresh token in the keystore, no cold-start refresh.** This gives one auth path (401 → refresh → replay) instead of a special boot sequence, and keeps no long-lived bearer token on disk. The cost is that the first authenticated request after each launch is a guaranteed 401 round-trip.
-
-**Local ids are never rewritten.** The server id is recorded in a side map keyed by the local id, so open screens, deep links and queued operations stay valid after a create syncs. The cost is a persisted id map that needs pruning.
-
-**Client-id upsert for idempotency.** From the device, a dropped response and a dropped request look identical, so creates are made safe to repeat rather than attempting exactly-once delivery. This is also why a create followed by a delete only cancels out while the create has not yet been attempted.
-
-**`sessionEpoch` fencing.** Simpler and more reliable than cancelling in-flight requests on logout, and it closes the window where user A's late response could be written into user B's account.
-
-**Health Connect read-only, Android-only, degrading to hidden UI.** The module cannot be imported off Android, so it sits behind a platform guard where every call has a safe default, and iOS hides the feature rather than showing controls that cannot work. Device readings prefill and nudge but never overwrite user input, because the person's own logged number is the one they trust.
-
-**Build-time env inlining with fail-fast validation.** No runtime config fetch and no silent default, at the cost of `yarn start --reset-cache` after every `.env` edit.
-
-## Further reading
-
-Design notes in `docs/`, written against the current code:
-
-| Document | Covers |
+| Key | Meaning |
 | --- | --- |
-| [AUTH_FLOW.md](docs/AUTH_FLOW.md) | Launch to dashboard, the three-navigator gating, session start, onboarding, interruption handling |
-| [CHECKIN_SYNC.md](docs/CHECKIN_SYNC.md) | Check-in create/edit/delete end to end, the outbox, the sync engine, failure matrix |
-| [SERVER_ID_MAPPING.md](docs/SERVER_ID_MAPPING.md) | The local-to-server id map: lifecycle, growth and cleanup |
-| [HEALTH_CONNECT.md](docs/HEALTH_CONNECT.md) | Android configuration, permission flows, read windows, mapping, slice state |
-| [HEALTH_CONNECT_PERMISSIONS.md](docs/HEALTH_CONNECT_PERMISSIONS.md) | The consent model, the five permissions, request and silent-read paths, revocation |
-| [HEALTH_CONNECT_EXPLAINED.md](docs/HEALTH_CONNECT_EXPLAINED.md) | Plain-language walkthrough with flowcharts |
-| [SLEEP_WATER_AND_NOTIFICATIONS.md](docs/SLEEP_WATER_AND_NOTIFICATIONS.md) | Sleep and water progress, local reminder notifications |
+| `API_MODE` | Which backend to use — exactly `server` or `local` |
+| `SERVER_URL` | The deployed backend. Must be `https://` |
+| `LOCAL_URL` | A backend running on your own machine |
+
+Pointing at the deployed backend:
+
+```env
+API_MODE=server
+SERVER_URL=https://healthtracker-backend-k6v3.onrender.com
+LOCAL_URL=http://10.0.2.2:3000
+```
+
+Pointing at a backend running locally — set `API_MODE=local` and match `LOCAL_URL` to how the device reaches your machine:
+
+| Target | `LOCAL_URL` |
+| --- | --- |
+| Android emulator | `http://10.0.2.2:3000` — the emulator's alias for the host machine |
+| iOS simulator | `http://localhost:3000` |
+| Physical device | `http://<your-LAN-IP>:3000` |
+
+Configuration is validated at startup and **fails fast** with a message telling you what to fix: an unrecognised `API_MODE`, an empty URL, an unfilled placeholder, or a URL with no scheme all stop the app rather than silently defaulting. An app quietly pointing at localhost is indistinguishable from a server that is down, so it refuses to guess. In development the resolved URL is logged once, and an `http://` server URL warns, because release builds block cleartext traffic.
+
+**After editing `.env`, restart Metro with `yarn start --reset-cache`.** These values are inlined into the JavaScript bundle at build time, so a plain reload keeps serving the old ones. `.env` is not committed; `.env.example` is the template.
+
+The deployed demo backend runs on a free hosting tier, so the first request after a period of inactivity may be slow while the service wakes up, and its data resets when it restarts.
+
+## 14. Building the APK
+
+```bash
+# Install dependencies
+yarn install
+
+# Start Metro (for development builds)
+yarn start
+
+# Debug build — installs and runs on a connected device or emulator
+yarn android
+
+# Debug APK
+cd android && ./gradlew assembleDebug
+# → android/app/build/outputs/apk/debug/app-debug.apk
+
+# Release APK
+cd android && ./gradlew assembleRelease
+# → android/app/build/outputs/apk/release/app-release.apk
+
+# Release AAB (for store upload)
+cd android && ./gradlew bundleRelease
+# → android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Application id `com.healthtracker`, version 1.0 (1). Hermes and the new architecture are enabled; minimum Android 8.0 (API 26), which is what Health Connect requires.
+
+Two things to know before sharing a build:
+
+- **`.env` values are inlined at build time.** The APK carries whatever `API_MODE` and URL were set when it was bundled. A build that has to work away from your machine needs `API_MODE=server` with an `https://` URL — it cannot be repointed afterwards.
+- **The release build type currently uses the debug signing config**, so `assembleRelease` produces a debug-signed APK. That installs fine for a demo or sideload, but a real release keystore is required before store distribution.
+
+## 15. Future Production Improvements
+
+- **Multi-device sessions** — a sessions/devices table so several devices stay signed in, with per-device revocation.
+- **HealthKit on iOS** — an iOS health provider behind the existing service interface.
+- **Cross-device health data sync** — only if the product requires it, with an explicit consented data model.
+- **Managed production database** — persistent, backed-up storage in place of a file-based demo database.
+- **Stronger conflict resolution** — a defined same-day rule and server-side deduplication, plus incremental cursor-based sync.
+- **E2E testing** — device-level flows for sign-up, onboarding, offline check-in and sync.
+- **Local state migrations** — migrate persisted state across schema versions instead of discarding it.
+- **Production hardening** — real email or SMS delivery for verification codes, rate limiting, structured logging, crash reporting and monitoring.

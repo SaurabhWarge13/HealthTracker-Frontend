@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash window background for API 26-30. From API 31 the platform draws its own
+  splash (see values-v31/styles.xml) and this drawable is never shown.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item>
+        <!--
+          gravity="center" on the <bitmap> draws it at its intrinsic, density-scaled
+          size, centred. The <item android:drawable=... android:gravity=...> form
+          would stretch it to fill the window instead.
+        -->
+        <bitmap
+            android:src="@drawable/splash_logo"
+            android:gravity="center"
+            android:antialias="true"
+            android:filter="true" />
+    </item>
+</layer-list>
