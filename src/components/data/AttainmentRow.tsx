@@ -16,21 +16,12 @@ export type AttainmentRowProps = {
   attainment: Attainment;
   icon: LucideIcon;
   label: string;
-  /** Turns a stored value into something readable — minutes, millilitres. */
   format: (value: number) => string;
-  /** Offered when there is no goal to measure against. */
   onSetGoal?: () => void;
   style?: StyleProp<ViewStyle>;
-  /** Recorded marks carry it; a gap gets `-gap` so the two are never confused. */
   testID?: string;
 };
 
-/**
- * Every state names itself. The dot repeats the state in colour, so colour is
- * never the only carrier — and off-target is grey, not terracotta, because
- * the whole app renders off-track in grey and this card must not shout louder
- * than the weight card above it.
- */
 const STATUS: Record<AttainmentStatus, { label: string; dot: ColorName }> = {
   onTrack: { label: 'On track', dot: 'statusImproving' },
   mixed: { label: 'Mixed', dot: 'statusSteady' },
@@ -40,20 +31,10 @@ const STATUS: Record<AttainmentStatus, { label: string; dot: ColorName }> = {
   notEnoughData: { label: 'Just started', dot: 'textHint' },
 };
 
-/**
- * 8dp marks with 2dp between them — ten of them need 98dp.
- *
- * That number is load-bearing. Panel content is `(deviceWidth - 68) / 2` less
- * this panel's padding, which is 102dp on a 320dp phone and 122dp on a common
- * 360dp one. The 9dp/4dp spacing the design was drawn at needs 126dp and
- * clips on everything narrower than 390. This fits every phone with no
- * measuring pass and looks near-identical.
- */
 const DOT = 8;
 const DOT_GAP = 2;
 const GAP_POINT = 3;
 
-/** The graded figure is bigger than the type scale goes; the face stays `hero`. */
 const HERO_SIZE = 32;
 
 export function AttainmentRow({
@@ -74,21 +55,9 @@ export function AttainmentRow({
 
   const averageText = average === null ? '—' : format(average);
 
-  /**
-   * A rate only when one is meaningful. Below three recorded values the
-   * average is the honest headline instead — "2 of 2" off two nights reads as
-   * a perfect record.
-   */
   const heroValue = graded ? `${hits}` : status === 'notRecorded' ? '—' : averageText;
   const heroSuffix = graded ? `/${recorded}` : null;
 
-  /**
-   * The state in a word, plus the number the metric is actually about.
-   *
-   * Direction A as drawn showed the word alone, which meant a graded panel
-   * never said how much the user slept — the one figure sleep is about. The
-   * word comes first so it still reads as the state.
-   */
   const footText = graded
     ? `${presentation.label} · ${averageText}`
     : status === 'notEnoughData'
@@ -146,8 +115,6 @@ export function AttainmentRow({
         <View style={styles.strip}>
           {bars.map(bar =>
             bar.ratio === null ? (
-              // A point, not an empty slot: near-zero ink is what makes
-              // "never logged" unmistakable next to a recorded zero.
               <View key={bar.at} style={styles.slot}>
                 <View
                   testID={testID === undefined ? undefined : `${testID}-gap`}
@@ -205,7 +172,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     borderRadius: radius.inner,
-    // 12, not 16: two panels plus ten marks do not fit a 320dp phone at 16.
     padding: spacing.md,
     gap: spacing.md,
   },
@@ -227,7 +193,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     flexShrink: 0,
   },
-  /** Logged but under the goal — outlined, deliberately unfilled. */
   ring: { borderWidth: 1.5 },
   slot: {
     width: DOT,
@@ -238,7 +203,6 @@ const styles = StyleSheet.create({
   },
   point: { width: GAP_POINT, height: GAP_POINT, borderRadius: radius.pill },
 
-  /** Reaches the 48dp minimum the bare text link never did. */
   cta: {
     height: 48,
     borderRadius: radius.pill,

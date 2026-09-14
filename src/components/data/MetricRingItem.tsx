@@ -7,11 +7,8 @@ import { ProgressRing, type RingState } from './ProgressRing';
 
 export type MetricRingItemProps = {
   icon: LucideIcon;
-  /** STEPS, SLEEP, WATER — rendered as an overline. */
   label: string;
-  /** Formatted reading, e.g. "8,421" or "7h 20m". */
   value?: string;
-  /** Formatted goal, e.g. "of 10,000". Omitted when no goal is set. */
   goal?: string;
   progress?: number;
   state?: RingState;

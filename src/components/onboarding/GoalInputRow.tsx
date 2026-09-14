@@ -7,7 +7,6 @@ import { spacing } from '@/theme';
 export type GoalInputRowProps = Omit<AppInputProps, 'size' | 'label'> & {
   icon: LucideIcon;
   label: string;
-  /** Unit shown after the value: steps, L, kg. */
   unit: string;
 };
 

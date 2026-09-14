@@ -9,18 +9,12 @@ export type ToastVariant = 'success' | 'error' | 'info';
 
 export type CreateToastProps = {
   text?: string;
-  /** Defaults to `info` — the variant that claims the least. */
   variant?: ToastVariant;
   style?: StyleProp<ViewStyle>;
 };
 
 type Tone = { background: ColorName; icon: ColorName; text: ColorName; glyph: LucideIcon };
 
-/**
- * `info` is neutral grey on purpose, not a softer red. A queued check-in is
- * safe on the device, not an error — the same rule `InlineBanner`
- * and `InlineNote` are built around.
- */
 const TONE: Record<ToastVariant, Tone> = {
   success: {
     background: 'userTint',
@@ -52,15 +46,12 @@ export function CreateToast({ text, variant = 'info', style }: CreateToastProps)
 
   return (
     <View
-      // One node, not an icon plus a stray line of text: a toast is a single
-      // announcement, and it is read without focus ever landing on it.
       accessible
       accessibilityLiveRegion="polite"
       accessibilityRole={variant === 'error' ? 'alert' : undefined}
       style={[
         styles.row,
         isDark ? styles.shadowDark : styles.shadowLight,
-        // Elevation alone is invisible on a dark surface, so add an edge.
         isDark ? styles.darkEdge : styles.noEdge,
         {
           backgroundColor: colors[tone.background],
@@ -72,8 +63,6 @@ export function CreateToast({ text, variant = 'info', style }: CreateToastProps)
     >
       <AppIcon icon={tone.glyph} size="base" color={tone.icon} />
 
-      {/* Three lines, not one: `AppText` allows 1.3x OS font scaling and the
-          copy from `userMessage` is full sentences, which will wrap. */}
       <AppText
         variant="bodySmall"
         color={tone.text}
@@ -94,7 +83,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.input,
     paddingVertical: spacing.md,
     paddingHorizontal: 14,
-    // Lines up with every screen's content edge rather than a percentage.
     marginHorizontal: layout.screenPadding,
   },
   text: { flex: 1 },

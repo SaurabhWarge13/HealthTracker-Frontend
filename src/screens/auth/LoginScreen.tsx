@@ -13,6 +13,7 @@ import { ControlledInput } from '@/components/forms';
 import { IconTile } from '@/components/layout';
 import { authMessage } from '@/domain/api/errors';
 import { loginSchema, type LoginValues } from '@/domain/auth/validation';
+import { useKeyboardSafeNav } from '@/hooks/useKeyboardSafeNav';
 import { useSignIn } from '@/hooks/useSignIn';
 import { useToast } from '@/hooks/useToast';
 import { spacing } from '@/theme';
@@ -24,6 +25,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
   const dispatch = useAppDispatch();
   const passwordRef = useRef<TextInput>(null);
   const { signIn, submitting } = useSignIn();
+  const safeNav = useKeyboardSafeNav();
   const showToast = useToast();
   const expiredReason = useAppSelector(state => state.auth.expiredReason);
 
@@ -42,19 +44,11 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         password: values.password,
       });
       if (result.ok) {
-        /**
-         * Only on the way out. A failure leaves the keyboard up and the field
-         * focused so a mistyped password can be fixed without a second tap.
-         * `Keyboard.dismiss()` rather than a ref blur: `sessionStarted` has
-         * already swapped the stack, so this screen may be unmounted here.
-         */
         Keyboard.dismiss();
         showToast('Welcome back', 'success');
         return;
       }
 
-      // Still marks the fields the server complained about, so the user can
-      // see *where* — the toast below is what tells them *what*.
       const { fieldErrors } = result.error;
       if (fieldErrors !== undefined) {
         for (const [field, message] of Object.entries(fieldErrors)) {
@@ -64,11 +58,6 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         }
       }
 
-      /**
-       * Every answer from the server or the network goes here, whatever the
-       * kind. The form only ever renders what the client itself validated;
-       * anything that took a round trip is a toast.
-       */
       showToast(authMessage(result.error), 'error');
     },
     [dispatch, setError, showToast, signIn],
@@ -80,7 +69,6 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
       padded
       centerContent
       keyboardAvoiding
-      // A link, not an action: it belongs under the keyboard, not on top of it.
       footerPlacement="scroll"
       footer={
         <View style={styles.footer}>
@@ -91,7 +79,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
             label="Create an account"
             variant="text"
             size={48}
-            onPress={() => navigation.navigate('Signup')}
+            onPress={() => safeNav(() => navigation.navigate('Signup'))}
           />
         </View>
       }
@@ -103,7 +91,6 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         Sign in to pick up your weight log and check-ins.
       </AppText>
 
-      {/* Says why they are back here, rather than leaving them to wonder. */}
       {expiredReason !== null ? (
         <InlineBanner
           icon={Clock}

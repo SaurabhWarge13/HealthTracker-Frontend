@@ -8,11 +8,8 @@ import { SourceChip, type DataSource } from './SourceChip';
 export type MeasurementRowProps = {
   icon: LucideIcon;
   label: string;
-  /** Formatted with its unit, e.g. "8,421" or "7h 20m" or "175 cm". */
   value: string;
-  /** Where the number came from. Omitted when there is nothing to say. */
   source?: DataSource;
-  /** Inline action instead of a chip — the form's "Change" link. */
   actionLabel?: string;
   onAction?: () => void;
   style?: StyleProp<ViewStyle>;

@@ -15,17 +15,9 @@ import { BottomTabNavigator } from './BottomTabNavigator';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
-/** Rendered by RootNavigator once logged in with a complete profile. */
 export function MainStack() {
-  // Keeps the Today card honest: re-reads permissions on every foreground.
   useHealthConnectResume();
-  /**
-   * The daily reminder. Mounted here because MainStack is the authenticated
-   * boundary: it arms on sign-in and cancels on logout or session expiry
-   * without either path having to call anything.
-   */
   useNotificationSchedule();
-  // Network state, and the queue that depends on it.
   useConnectivity();
   useSync();
 

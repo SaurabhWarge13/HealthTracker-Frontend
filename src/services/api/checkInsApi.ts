@@ -17,7 +17,6 @@ export const checkInsApi = baseApi.injectEndpoints({
         body: toCheckInBody(checkIn),
       }),
     }),
-    /** PUT, not PATCH: a full replace, so the whole check-in goes up. */
     updateCheckIn: builder.mutation<CheckInDto, { serverId: string; checkIn: CheckIn }>({
       query: ({ serverId, checkIn }) => ({
         url: API_PATHS.CHECKIN(serverId),

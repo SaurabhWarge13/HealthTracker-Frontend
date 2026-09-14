@@ -12,15 +12,11 @@ import { layout, spacing, type ColorName } from '@/theme';
 
 export type ListRowProps = {
   label: string;
-  /** Omitted for rows that only navigate (Privacy policy). */
   value?: string;
-  /** Dim the value when nothing is set yet ("Not set"). */
   valueMuted?: boolean;
   leadingIcon?: LucideIcon;
-  /** Replaces the chevron — a chip, a link, anything the artboard shows. */
   trailing?: React.ReactNode;
   onPress?: () => void;
-  /** Chevron for pushes, external-link glyph for leaving the app. */
   chevronIcon?: LucideIcon;
   labelColor?: ColorName;
   style?: StyleProp<ViewStyle>;
@@ -76,7 +72,6 @@ export function ListRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={value !== undefined ? `${label}, ${value}` : label}
-      // No ripple: RN's bounded ripple mask is a rectangle. See AppButton.
       style={({ pressed }) => [styles.row, pressed && styles.pressed, style]}
     >
       {content}

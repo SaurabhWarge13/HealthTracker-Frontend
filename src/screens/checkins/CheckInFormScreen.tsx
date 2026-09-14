@@ -9,6 +9,7 @@ import { MeasurementRow } from '@/components/data';
 import { ControlledInput } from '@/components/forms';
 import { ScreenHeader, SectionCard, StickyFooter } from '@/components/layout';
 import { AppDialog } from '@/components/overlays';
+import { useKeyboardSafeNav } from '@/hooks';
 import type { CheckInSources, Mood, SourcedField } from '@/domain/checkins/types';
 import {
   checkInSchema,
@@ -50,17 +51,12 @@ export function CheckInFormScreen({
   const latest = useAppSelector(selectLatestCheckIn);
   const profile = useAppSelector(selectProfile);
   const hc = useAppSelector(selectHealthConnect);
+  const safeNav = useKeyboardSafeNav();
 
   const [mood, setMood] = useState<Mood | null>(existing?.mood ?? null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  /** Fields the user has touched this session — these become "Manual". */
   const [edited, setEdited] = useState<Set<SourcedField>>(new Set());
 
-  /**
-   * Prefill rules. Weight comes from Health Connect only when its
-   * reading is newer than the last check-in; otherwise the previous weight is
-   * the number they will most likely adjust from.
-   */
   const prefill = useMemo(() => {
     if (isEditing && existing) {
       return {
@@ -75,8 +71,6 @@ export function CheckInFormScreen({
       };
     }
 
-    // One rule, one place: recent enough AND newer than the user's own last
-    // check-in. A stale scale reading must never overwrite their number.
     const hcWeightIsFresher =
       hc.today.weightKg !== null &&
       shouldPrefillWeight(
@@ -121,9 +115,6 @@ export function CheckInFormScreen({
     CheckInPayload
   >({
     resolver: zodResolver(checkInSchema),
-    // onChange, not onTouched: Save is disabled the moment a value goes out of
-    // range, so handleSubmit can never fire to reveal why. Waiting for a blur
-    // left the user with a grey button and no explanation.
     mode: 'onChange',
     defaultValues: {
       weight: prefill.weight,
@@ -135,7 +126,6 @@ export function CheckInFormScreen({
     },
   });
 
-  /** A field the user has touched is theirs, whatever it started as. */
   const sourceFor = useCallback(
     (field: SourcedField) =>
       edited.has(field) ? ('manual' as const) : prefill.sources[field],
@@ -175,26 +165,36 @@ export function CheckInFormScreen({
         sources,
       };
 
-      // Saved locally and queued in one step — no await, because a check-in
-      // does not wait for a network to exist.
-      if (isEditing && editingId !== undefined) {
-        dispatch(updateCheckIn(editingId, draft));
-      } else {
-        dispatch(createCheckIn(draft));
-      }
-      navigation.goBack();
+      safeNav(() => {
+        if (isEditing && editingId !== undefined) {
+          dispatch(updateCheckIn(editingId, draft));
+        } else {
+          dispatch(createCheckIn(draft));
+        }
+        navigation.goBack();
+      });
     },
-    [dispatch, editingId, isEditing, mood, navigation, profile.heightCm, sourceFor],
+    [
+      dispatch,
+      editingId,
+      isEditing,
+      mood,
+      navigation,
+      profile.heightCm,
+      safeNav,
+      sourceFor,
+    ],
   );
 
   const handleDelete = useCallback(() => {
-    if (editingId !== undefined) {
-      dispatch(deleteCheckIn(editingId));
-    }
     setConfirmDelete(false);
-    // Past the detail screen too — the entry it showed no longer exists.
-    navigation.navigate('Tabs', { screen: 'History' });
-  }, [dispatch, editingId, navigation]);
+    safeNav(() => {
+      if (editingId !== undefined) {
+        dispatch(deleteCheckIn(editingId));
+      }
+      navigation.navigate('Tabs', { screen: 'History' });
+    });
+  }, [dispatch, editingId, navigation, safeNav]);
 
   const subtitle = isEditing
     ? existing
@@ -212,7 +212,7 @@ export function CheckInFormScreen({
           variant="modal"
           title={isEditing ? 'Edit check-in' : 'New check-in'}
           subtitle={subtitle}
-          onBack={navigation.goBack}
+          onBack={() => safeNav(navigation.goBack)}
           backIcon={X}
           backAccessibilityLabel="Close without saving"
           actionIcon={isEditing ? Trash2 : undefined}
@@ -297,8 +297,6 @@ export function CheckInFormScreen({
             onValueChange={() => markEdited('water')}
           />
 
-          {/* Height is a quiet reference row, never a field: asking someone
-              their height every check-in makes an app feel unconsidered. */}
           <AppDivider style={styles.heightDivider} />
           <MeasurementRow
             icon={Ruler}
@@ -307,7 +305,9 @@ export function CheckInFormScreen({
               profile.heightCm === null ? 'Not set' : `${profile.heightCm} cm`
             }
             actionLabel="Change"
-            onAction={() => navigation.navigate('Tabs', { screen: 'Settings' })}
+            onAction={() =>
+              safeNav(() => navigation.navigate('Tabs', { screen: 'Settings' }))
+            }
           />
         </View>
       </SectionCard>

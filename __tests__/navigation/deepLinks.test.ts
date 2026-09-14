@@ -15,7 +15,6 @@ describe('buildCheckInLink', () => {
   });
 
   it('escapes an id that would otherwise break the path', () => {
-    // A slash would read as an extra segment and the parser would reject it.
     expect(parseDeepLink(buildCheckInLink('a/b'))).toEqual({
       kind: 'checkin',
       id: 'a/b',
@@ -57,7 +56,6 @@ describe('parseDeepLink', () => {
   });
 });
 
-/** One case per row of the auth matrix in the session plan (spec §3.8). */
 describe('decideDeepLink', () => {
   const CHECKIN = 'healthtracker://checkin/seed_7';
 
@@ -107,8 +105,6 @@ describe('decideDeepLink', () => {
   });
 
   it('ignores a malformed link while signed out instead of stashing it', () => {
-    // Otherwise the user signs in only to be shown a check-in they never
-    // asked for. Parsing deliberately happens before the auth gate.
     expect(
       decideDeepLink('healthtracker://profile/1', context({ hasSession: false })),
     ).toEqual({ action: 'ignore' });
@@ -120,8 +116,6 @@ describe('decideDeepLink', () => {
   });
 
   it('waits rather than claiming a check-in is gone before the list arrives', () => {
-    // At cold start the link races the first GET /checkins. Answering "no
-    // longer exists" there is the most confusing possible wrong answer.
     const stillLoading = context({
       checkInsLoaded: false,
       checkInExists: () => false,

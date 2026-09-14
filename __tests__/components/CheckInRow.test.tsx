@@ -1,13 +1,3 @@
-/**
- * The history row moved sleep and water from text to meters, which moves the
- * blank-is-not-a-zero rule from wording into drawing. These pin both halves:
- * a logged zero keeps a track (ink present, goal missed) while a blank has no
- * track at all, and the spoken label still says which is which in words.
- *
- * The `date` variant is the dashboard's, and is asserted to be unchanged —
- * that default is the whole reason this redesign could not reach the
- * dashboard's "Recent check-ins" list.
- */
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { CheckInRow } from '@/components/data';
@@ -63,7 +53,6 @@ describe('a blank and a logged zero must not look alike', () => {
     const { getByTestId } = await show(checkIn({ waterMl: null }));
 
     const style = styleOf(getByTestId(`${TEST_ID}-water`));
-    // Unpainted: absence of ink is the signal.
     expect(style.backgroundColor).toBeUndefined();
   });
 
@@ -98,9 +87,7 @@ describe('the meter against a goal', () => {
       { sleepGoalMinutes: null },
     );
 
-    // No track, so nothing implies a target that does not exist.
     expect(styleOf(getByTestId(`${TEST_ID}-sleep`)).backgroundColor).toBeUndefined();
-    // And the label states the value without a verdict.
     expect(getByLabelText(/Sleep 6h 40m\./)).toBeTruthy();
   });
 
@@ -117,7 +104,6 @@ describe('what the row says', () => {
     const { getByText, queryByText } = await show(checkIn());
     expect(getByText('72.0')).toBeTruthy();
     expect(getByText('8:12 PM')).toBeTruthy();
-    // The date belongs to the day heading above the sheet, not the row.
     expect(queryByText(/8 Sep/)).toBeNull();
   });
 

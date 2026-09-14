@@ -9,11 +9,6 @@ export const profileApi = baseApi.injectEndpoints({
       query: () => ({ url: API_PATHS.PROFILE, method: 'GET' }),
       providesTags: ['Profile'],
     }),
-    /**
-     * PUT, not PATCH: the server replaces the whole record and writes null
-     * over anything omitted. `toProfileBody` takes the complete profile for
-     * exactly that reason — a partial update here silently blanks goals.
-     */
     updateProfile: builder.mutation<
       ProfileDto,
       ProfilePatch & { baselineWeightKg: number }

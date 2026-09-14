@@ -6,9 +6,7 @@ import { AppChip, type AppChipVariant } from './AppChip';
 
 export type StatusPillProps = {
   status: ProgressStatus;
-  /** Whether a target weight exists, which decides judging vs describing. */
   hasTarget: boolean;
-  /** Direction of recent movement, for the neutral wording. */
   trendingDown?: boolean;
   style?: StyleProp<ViewStyle>;
 };
@@ -31,7 +29,6 @@ export function StatusPill({
   let presentation = withTarget[status];
 
   if (!hasTarget && status !== 'notEnoughData') {
-    // No target means no opinion: describe the movement, don't grade it.
     presentation =
       status === 'steady'
         ? { label: 'Steady', variant: 'steady', icon: Minus }

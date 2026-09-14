@@ -42,7 +42,6 @@ export function RootNavigator() {
     ? 'onboarding'
     : 'main';
 
-  // Owns URL routing outright; no `linking` config is given to the container.
   useDeepLinks(containerReady);
 
   const navigationTheme = useMemo<NavigationTheme>(() => {
@@ -78,18 +77,6 @@ export function RootNavigator() {
         <MainStack />
       )}
 
-      {/*
-        Mounted once, here rather than in a screen, for two reasons.
-
-        The container itself never remounts — only the stack inside it swaps —
-        so a toast raised at the moment of sign-in survives the auth → main
-        transition instead of being torn down mid-animation with the screen
-        that raised it.
-
-        And `topOffset` gets real insets: `SafeAreaProvider` is above this in
-        `App.tsx`. Top, not bottom, because both auth screens are
-        keyboard-avoiding and the tab bar owns the bottom edge.
-      */}
       <Toast
         config={toastConfig}
         position="top"

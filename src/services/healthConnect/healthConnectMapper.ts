@@ -6,10 +6,6 @@ import type {
   TodayReadings,
 } from '@/store/healthConnect/healthConnectSlice';
 
-/**
- * One entry per field. `null` means we never read it — no permission — as
- * opposed to `[]`, which means we read and the device had nothing.
- */
 export type RawTodayRecords = {
   weight: RecordResult<'Weight'>[] | null;
   height: RecordResult<'Height'>[] | null;
@@ -27,7 +23,6 @@ const MINUTE_MS = 60 * 1000;
 
 const time = (iso: string): number => new Date(iso).getTime();
 
-/** Permission denied, granted-but-empty, and got-a-value are three answers. */
 const availabilityOf = (
   records: unknown[] | null,
   hasValue: boolean,
@@ -38,7 +33,6 @@ const availabilityOf = (
   return hasValue ? 'AVAILABLE' : 'NO_DATA';
 };
 
-/** Newest record wins for the slow-moving measures. */
 function latestByTime<T extends { time: string }>(records: T[] | null): T | null {
   if (records === null || records.length === 0) {
     return null;
@@ -52,7 +46,6 @@ function sumSteps(records: RecordResult<'Steps'>[] | null): number | null {
   if (records === null || records.length === 0) {
     return null;
   }
-  // Several apps can each write part of the day; the day's total is the sum.
   const total = records.reduce((sum, record) => sum + record.count, 0);
   return Math.round(total);
 }
@@ -65,11 +58,6 @@ function sumWaterMl(records: RecordResult<'Hydration'>[] | null): number | null 
   return Math.round(total);
 }
 
-/**
- * Sleep for "today" means the night that ENDED today — someone who
- * woke at 7 AM slept from 11 PM yesterday, and reporting zero until they go
- * to bed again would be useless. Sessions still in progress are ignored.
- */
 function sumSleepMinutes(
   records: RecordResult<'SleepSession'>[] | null,
   now: number,
@@ -117,7 +105,6 @@ export function mapTodayReadings(raw: RawTodayRecords, now: number): MappedReadi
       weightRecordedAt: weightRecord === null ? null : time(weightRecord.time),
       heightCm,
       heightRecordedAt: heightRecord === null ? null : time(heightRecord.time),
-      // When we read, not when the device recorded — two different facts.
       syncedAt: now,
     },
     availability: {

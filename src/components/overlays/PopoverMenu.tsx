@@ -22,7 +22,6 @@ export type PopoverMenuItem = {
 
 export type PopoverMenuProps = {
   visible: boolean;
-  /** Window-space rect of the button that opened the menu. */
   anchor: PopoverAnchor | null;
   items: PopoverMenuItem[];
   onDismiss: () => void;
@@ -35,7 +34,6 @@ export function PopoverMenu({ visible, anchor, items, onDismiss }: PopoverMenuPr
   const { colors, isDark } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
 
-  // Right-align to the anchor, then keep the whole menu on screen.
   const right = anchor
     ? Math.max(EDGE_MARGIN, screenWidth - (anchor.x + anchor.width))
     : EDGE_MARGIN;
@@ -55,7 +53,6 @@ export function PopoverMenu({ visible, anchor, items, onDismiss }: PopoverMenuPr
           style={[
             styles.menu,
             isDark ? styles.shadowDark : styles.shadowLight,
-            // Elevation alone is invisible on a dark surface, so add an edge.
             isDark ? styles.darkEdge : styles.noEdge,
             {
               top,
@@ -75,7 +72,6 @@ export function PopoverMenu({ visible, anchor, items, onDismiss }: PopoverMenuPr
                   onPress={item.onPress}
                   accessibilityRole="menuitem"
                   accessibilityLabel={item.label}
-                  // No ripple: RN masks it to a rectangle. See AppButton.
                   style={({ pressed }) => [
                     styles.item,
                     pressed && { backgroundColor: colors.surfaceNeutral },

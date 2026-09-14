@@ -10,7 +10,6 @@ import {
   type ApiErrorKind,
 } from '@/domain/api/errors';
 
-/** The exact envelope the API returns for every error. */
 const envelope = (status: number, code: string, message: string, fields?: unknown) => ({
   status,
   data: { error: fields === undefined ? { code, message } : { code, message, fields } },
@@ -90,7 +89,6 @@ describe('normalizeError — transport failures', () => {
     const failed = { status: 'FETCH_ERROR', error: 'Network request failed' };
     expect(normalizeError(failed, { isOnline: false }).kind).toBe('offline');
     expect(normalizeError(failed, { isOnline: true }).kind).toBe('network');
-    // Without a hint, assume the server is the problem rather than the user.
     expect(normalizeError(failed).kind).toBe('network');
   });
 
@@ -128,13 +126,6 @@ describe('flattenFieldErrors', () => {
     ).toEqual({ email: 'Invalid email' });
   });
 
-  /**
-   * What this server actually sends. Zod v4's `treeifyError` nests under
-   * `errors`/`properties`, not v3's `_errors` — and getting it wrong is silent:
-   * every field message is dropped, `fieldErrors` comes back undefined, and the
-   * caller falls through to showing the server's raw text. That is how
-   * "Invalid input: expected string, received null" reached a user.
-   */
   it("reads Zod v4's treeifyError shape", () => {
     expect(
       flattenFieldErrors({
@@ -270,8 +261,6 @@ describe('authMessage — the transport copy, minus the check-in promises', () =
       normalizeError({ status: 'FETCH_ERROR' }, { isOnline: true }),
       normalizeError({ status: 'TIMEOUT_ERROR' }),
     ]) {
-      // What `userMessage` would have said here is untrue on an auth screen:
-      // nothing was queued, so nothing is "safe on this device".
       expect(authMessage(error)).not.toMatch(/saved|safe|sync/i);
       expect(authMessage(error).length).toBeGreaterThan(0);
     }
@@ -294,12 +283,6 @@ describe('authMessage — the transport copy, minus the check-in promises', () =
   });
 });
 
-/**
- * A wrong verification code is the user's mistake to fix, not a dead session.
- * Both codes are 400 for that reason: at 401 `kindByStatus` would call them
- * `sessionExpired`, and the reauth wrapper would go looking for a refresh token
- * that does not exist until the code is accepted.
- */
 describe('the OTP codes are a complaint, not an expired session', () => {
   const otpCodes = [API_ERROR_CODES.INVALID_OTP, API_ERROR_CODES.NO_PENDING_SIGNUP];
 
@@ -313,11 +296,6 @@ describe('the OTP codes are a complaint, not an expired session', () => {
     expect(REFRESHABLE_CODES).not.toContain(code);
   });
 
-  /**
-   * `validation` normally hides the server's summary behind the field messages.
-   * These carry no fields, so the server's own sentence has to come through —
-   * it is the only thing that tells the user what went wrong.
-   */
   it.each(otpCodes)('%s shows the server wording, with no field errors', code => {
     const error = normalizeError(envelope(400, code, 'the specific reason'));
     expect(error.fieldErrors).toBeUndefined();

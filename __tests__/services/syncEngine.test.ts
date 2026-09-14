@@ -1,15 +1,3 @@
-/**
- * The engine that orchestrates the offline queue.
- *
- * Its guarantees are the ones that cost the user real data when they break,
- * and none of them could be checked by hand: a delete that 404s, a PUT against
- * an id the server no longer has, and a create whose response was lost. All
- * three are states you cannot reach on demand with a working server.
- *
- * `rawBaseQuery` is mocked so the rest of the chain is real — the RTK Query
- * endpoints, the reauth wrapper, error normalisation and every reducer run
- * exactly as they do in the app.
- */
 const mockRawBaseQuery = jest.fn();
 
 jest.mock('@/services/api/baseQuery', () => ({
@@ -77,22 +65,14 @@ const notFound = () => ({
   error: { status: 404, data: { error: { code: 'NOT_FOUND', message: 'Resource not found' } } },
 });
 
-/**
- * Tracked so it can be torn down. `pullCheckIns` unsubscribes its query, which
- * leaves RTK Query's `keepUnusedDataFor` timer running for another minute —
- * long past the end of the test, and Jest complains that the environment was
- * torn down underneath it.
- */
 let activeStore: ReturnType<typeof createAppStore> | null = null;
 
-/** A signed-in store. Connectivity already defaults to online. */
 const signedInStore = () => {
   activeStore = createAppStore();
   activeStore.dispatch(sessionStarted({ userId: 'u1', email: 'a@b.c', accessToken: 't' }));
   return activeStore;
 };
 
-/** What each successive request returns, in order. */
 const respond = (...responses: unknown[]) => {
   for (const response of responses) {
     mockRawBaseQuery.mockImplementationOnce(() => Promise.resolve(response));
@@ -107,14 +87,10 @@ const requests = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // Fake timers so RTK Query's cache-expiry timer cannot outlive the test.
-  // The requests themselves resolve through mocked promises, so nothing here
-  // actually waits on a clock.
   jest.useFakeTimers();
 });
 
 afterEach(() => {
-  // Drops every cache entry, then the timers attached to them.
   activeStore?.dispatch(baseApi.util.resetApiState());
   activeStore = null;
   jest.clearAllTimers();
@@ -130,8 +106,6 @@ describe('drainSyncQueue', () => {
     respond(notFound());
     await drainSyncQueue(store);
 
-    // Reporting this as a failure would put a card in front of the user asking
-    // them to decide about something that is already done.
     expect(store.getState().sync.ops).toHaveLength(0);
     expect(store.getState().sync.lastSyncedAt).not.toBeNull();
   });
@@ -143,20 +117,16 @@ describe('drainSyncQueue', () => {
       opEnqueued(makePendingOp('op_1', 'update', 'local_1', checkIn('local_1', 71), PAST)),
     );
 
-    // PUT 404s, then the fallback POST upserts on clientId.
     respond(notFound(), { data: dto({ id: 'srv_new', clientId: 'local_1', weightKg: 71 }) });
     await drainSyncQueue(store);
 
     expect(requests()).toEqual(['PUT /checkins/stale_id', 'POST /checkins']);
-    // The user still has this check-in and still means for it to exist, so it
-    // is re-created rather than turned into a failure card.
     expect(store.getState().sync.ops).toHaveLength(0);
     expect(store.getState().sync.serverIds.local_1).toBe('srv_new');
   });
 
   it('sends an update as an upsert when no server id was ever learned', async () => {
     const store = signedInStore();
-    // No serverIds entry: the create landed but its response never arrived.
     store.dispatch(
       opEnqueued(makePendingOp('op_1', 'update', 'local_1', checkIn('local_1', 70), PAST)),
     );
@@ -164,7 +134,6 @@ describe('drainSyncQueue', () => {
     respond({ data: dto({ id: 'srv_9', clientId: 'local_1', weightKg: 70 }) });
     await drainSyncQueue(store);
 
-    // Previously this op was dropped and reported as a successful sync.
     expect(requests()).toEqual(['POST /checkins']);
     expect(store.getState().sync.serverIds.local_1).toBe('srv_9');
     expect(store.getState().sync.ops).toHaveLength(0);
@@ -182,7 +151,6 @@ describe('drainSyncQueue', () => {
     expect(store.getState().sync.serverIds.local_1).toBe('srv_9');
     expect(store.getState().sync.ops).toHaveLength(0);
 
-    // The op is long gone; the mapping is what makes this addressable.
     store.dispatch(
       opEnqueued(makePendingOp('op_2', 'update', 'local_1', checkIn('local_1', 70), PAST)),
     );
@@ -202,12 +170,10 @@ describe('drainSyncQueue', () => {
     await drainSyncQueue(store);
 
     store.dispatch(opEnqueued(makePendingOp('op_2', 'delete', 'local_1', null, PAST)));
-    // DELETE returns no body; `null` is the empty-but-valid result shape.
     respond({ data: null });
     await drainSyncQueue(store);
 
     expect(requests()).toEqual(['POST /checkins', 'DELETE /checkins/srv_9']);
-    // The row is gone, so the mapping has nothing left to point at.
     expect(store.getState().sync.serverIds.local_1).toBeUndefined();
   });
 
@@ -225,7 +191,6 @@ describe('drainSyncQueue', () => {
     const op = store.getState().sync.ops[0];
     expect(op.failed).toBe(true);
     expect(op.lastErrorKind).toBe('validation');
-    // One attempt only — a rejected payload fails identically forever.
     expect(mockRawBaseQuery).toHaveBeenCalledTimes(1);
   });
 
@@ -248,13 +213,11 @@ describe('drainSyncQueue', () => {
 describe('pullCheckIns', () => {
   it('recovers the local id mapping from the clientId the server echoes back', async () => {
     const store = signedInStore();
-    // The device created this offline and never learned the server's id.
     respond({ data: [dto({ id: 'srv_9', clientId: 'local_1' })] });
 
     await pullCheckIns(store);
 
     expect(store.getState().sync.serverIds.local_1).toBe('srv_9');
-    // Keyed by the local id, so it appears once — not twice under both ids.
     expect(store.getState().checkins.allIds).toEqual(['local_1']);
   });
 
@@ -264,15 +227,12 @@ describe('pullCheckIns', () => {
 
     await pullCheckIns(store);
 
-    // A self-mapping is what this used to write. Both readers reach the same
-    // answer without one, and it cost a persisted key per server row.
     expect(store.getState().sync.serverIds).toEqual({});
     expect(store.getState().checkins.allIds).toEqual(['srv_9']);
   });
 
   it('drops a mapping for a row that is no longer on the server', async () => {
     const store = signedInStore();
-    // Deleted on another device; nothing here references it any more.
     store.dispatch(serverIdsRecorded({ local_1: 'srv_9' }));
 
     respond({ data: [] });
@@ -289,8 +249,6 @@ describe('pullCheckIns', () => {
     respond({ data: [dto({ id: 'srv_9', clientId: 'local_1' })] });
     await pullCheckIns(store);
 
-    // Reconcile takes the row off the list, so it is absent from `keep` — the
-    // op scan inside the reducer is the only thing keeping the delete's target.
     expect(store.getState().checkins.allIds).toEqual([]);
     expect(store.getState().sync.serverIds.local_1).toBe('srv_9');
   });
@@ -302,7 +260,6 @@ describe('pullCheckIns', () => {
     respond({ error: { status: 'FETCH_ERROR', error: 'offline' } });
     await pullCheckIns(store);
 
-    // Absence from a response that never came is not deletion.
     expect(store.getState().sync.serverIds).toEqual({ local_1: 'srv_9' });
   });
 
@@ -315,7 +272,6 @@ describe('pullCheckIns', () => {
     respond({ error: { status: 'FETCH_ERROR', error: 'offline' } });
     await pullCheckIns(store);
 
-    // It is the user's work and it is still on the device.
     expect(store.getState().checkins.allIds).toHaveLength(1);
   });
 
@@ -331,13 +287,6 @@ describe('pullCheckIns', () => {
   });
 });
 
-/**
- * The fence against results belonging to a session that has ended.
- *
- * `hasSession` alone cannot do this job, and the gap is the whole point:
- * user A logs out, user B signs in, A's request finally returns to find
- * `hasSession` true again — and writes A's data into B's account.
- */
 describe('session fencing', () => {
   it('drops an op result that lands after logout', async () => {
     const store = signedInStore();
@@ -345,14 +294,12 @@ describe('session fencing', () => {
       opEnqueued(makePendingOp('op_1', 'create', 'local_1', checkIn('local_1'), PAST)),
     );
 
-    // The session ends while the POST is on the wire.
     mockRawBaseQuery.mockImplementationOnce(async () => {
       store.dispatch(loggedOut());
       return { data: dto({ id: 'srv_9', clientId: 'local_1' }) };
     });
     await drainSyncQueue(store);
 
-    // Teardown emptied the queue; the late success must not refill any of it.
     expect(store.getState().sync.ops).toEqual([]);
     expect(store.getState().sync.serverIds).toEqual({});
     expect(store.getState().sync.lastSyncedAt).toBeNull();
@@ -364,8 +311,6 @@ describe('session fencing', () => {
       opEnqueued(makePendingOp('op_1', 'create', 'local_1', checkIn('local_1'), PAST)),
     );
 
-    // The sequence `hasSession` cannot catch: by the time this resolves there
-    // is a session again — it just belongs to somebody else.
     mockRawBaseQuery.mockImplementationOnce(async () => {
       store.dispatch(loggedOut());
       store.dispatch(
@@ -376,7 +321,6 @@ describe('session fencing', () => {
     await drainSyncQueue(store);
 
     expect(store.getState().auth.userId).toBe('B');
-    // Nothing of A's reaches B.
     expect(store.getState().sync.serverIds).toEqual({});
     expect(store.getState().sync.ops).toEqual([]);
   });
@@ -390,8 +334,6 @@ describe('session fencing', () => {
     });
     await pullCheckIns(store);
 
-    // A list for an account that is no longer signed in must not repopulate
-    // the store the teardown just emptied.
     expect(store.getState().checkins.allIds).toEqual([]);
     expect(store.getState().sync.serverIds).toEqual({});
   });
@@ -402,7 +344,6 @@ describe('pullCheckIns single-flight', () => {
     const store = signedInStore();
     respond({ data: [dto({ id: 'srv_9', clientId: 'local_1' })] });
 
-    // Both callers start before either resolves.
     await Promise.all([pullCheckIns(store), pullCheckIns(store)]);
 
     expect(requests()).toEqual(['GET /checkins']);
@@ -419,7 +360,6 @@ describe('pullCheckIns single-flight', () => {
     await pullCheckIns(store);
     await pullCheckIns(store);
 
-    // The latch releases; it does not wedge shut.
     expect(requests()).toEqual(['GET /checkins', 'GET /checkins']);
   });
 });
@@ -434,7 +374,6 @@ describe('pull failure is recorded, never destructive', () => {
     respond({ error: { status: 'FETCH_ERROR', error: 'offline' } });
     await pullCheckIns(store);
 
-    // The read model is untouched — a dropped connection is not data loss.
     expect(store.getState().checkins.allIds).toEqual(['local_1']);
     expect(store.getState().checkins.lastPullFailed).toBe(true);
   });
@@ -448,18 +387,12 @@ describe('pull failure is recorded, never destructive', () => {
     await pullCheckIns(store);
     expect(store.getState().checkins.lastPullFailed).toBe(true);
 
-    // And clears once a list arrives again.
     respond({ data: [dto({ id: 'srv_9', clientId: 'local_1' })] });
     await pullCheckIns(store);
     expect(store.getState().checkins.lastPullFailed).toBe(false);
   });
 });
 
-/**
- * The profile push had no way to give up. A payload the server rejects fails
- * identically forever, and `pushProfile` re-sent it on every mount,
- * foreground and reconnect with nothing on screen to say so.
- */
 describe('pushProfile failure handling', () => {
   const withDirtyProfile = () => {
     const store = signedInStore();
@@ -495,7 +428,6 @@ describe('pushProfile failure handling', () => {
     await pushProfile(store);
 
     expect(store.getState().profile.pendingSync).toBe(true);
-    // Not flagged: another attempt could plausibly succeed.
     expect(store.getState().profile.syncFailed).toBe(false);
 
     respond({ data: { name: 'Ada', baselineWeight: 80 } });
@@ -515,10 +447,8 @@ describe('pushProfile failure handling', () => {
     await pushProfile(store);
     expect(store.getState().profile.syncFailed).toBe(true);
     expect(store.getState().profile.lastError).toBeTruthy();
-    // The edit is still the user's, and still unsynced.
     expect(store.getState().profile.pendingSync).toBe(true);
 
-    // The loop that used to run forever: further triggers send nothing.
     const before = mockRawBaseQuery.mock.calls.length;
     await pushProfile(store);
     await pushProfile(store);

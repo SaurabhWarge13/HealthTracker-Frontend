@@ -14,22 +14,14 @@ import { spacing } from '@/theme';
 export type MoodPickerProps = {
   value: Mood | null;
   onChange: (mood: Mood) => void;
-  /** The faces only exist once this has been measured — see `width` below. */
   testID?: string;
 };
 
-/** Design size on a 390pt artboard; narrower screens get a smaller circle. */
 const MAX_FACE = 56;
 const GAPS = spacing.sm * (MOOD_VALUES.length - 1);
 
 export function MoodPicker({ value, onChange, testID }: MoodPickerProps) {
   const { colors } = useTheme();
-  /**
-   * Measured rather than an `aspectRatio`: a flexed box with an aspect ratio
-   * kept resolving to a few pixels off square, and a near-square box with a
-   * pill radius draws a stadium, not a circle. An explicit width and height
-   * cannot be reinterpreted by a layout pass.
-   */
   const [width, setWidth] = useState<number | null>(null);
 
   const onLayout = (event: LayoutChangeEvent) =>
@@ -43,7 +35,6 @@ export function MoodPicker({ value, onChange, testID }: MoodPickerProps) {
   return (
     <View onLayout={onLayout} testID={testID}>
       {size === null ? (
-        // Hold the row's height so the card does not jump once measured.
         <View style={styles.placeholder} />
       ) : (
         <View style={styles.row} accessibilityRole="radiogroup">
@@ -56,8 +47,6 @@ export function MoodPicker({ value, onChange, testID }: MoodPickerProps) {
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
                 accessibilityLabel={MOOD_LABELS[mood]}
-                // Not borderless: an unbounded ripple is masked to the view's
-                // rectangle on Android and flashes a square behind the circle.
                 android_ripple={{
                   color: colors.userTintPressed,
                   borderless: false,
@@ -104,8 +93,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   face: {
-    // Constant width: a border that thickened on selection would nudge the
-    // icon inside the circle. Only the colours change.
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',

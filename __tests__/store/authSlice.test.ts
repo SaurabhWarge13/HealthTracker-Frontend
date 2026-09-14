@@ -37,7 +37,6 @@ describe('authSlice', () => {
 
     const out = authReducer(state, loggedOut());
 
-    // Everything except the epoch, which is a counter and not session data.
     expect(out).toEqual({ ...initialAuthState, sessionEpoch: out.sessionEpoch });
     expect(out.userId).toBeNull();
     expect(out.email).toBeNull();
@@ -46,11 +45,6 @@ describe('authSlice', () => {
   });
 });
 
-/**
- * Expiry and logout end a session for very different reasons, and the app
- * treats them differently on purpose: one is an authentication failure, the
- * other is the user asking to be forgotten.
- */
 describe('sessionExpired vs loggedOut', () => {
   const signedIn = () =>
     authReducer(
@@ -61,16 +55,9 @@ describe('sessionExpired vs loggedOut', () => {
   it('keeps who the retained data belongs to when a session expires', () => {
     const state = authReducer(signedIn(), sessionExpired('Session ended'));
 
-    // The session is over...
     expect(state.hasSession).toBe(false);
     expect(state.accessToken).toBeNull();
     expect(state.expiredReason).toBe('Session ended');
-    /**
-     * ...but the identity survives, because the *data* survives. This is the
-     * whole fix for the leak: nulling `userId` here left the sign-in guard
-     * with nothing to compare against, so a different user inherited the
-     * previous one's check-ins.
-     */
     expect(state.userId).toBe('A');
     expect(state.email).toBe('a@example.com');
   });
@@ -96,8 +83,6 @@ describe('sessionExpired vs loggedOut', () => {
       restarted.sessionEpoch,
       out.sessionEpoch,
     ];
-    // Strictly increasing: a captured epoch can never be mistaken for a later
-    // session's, which is what the sync fence relies on.
     expect(new Set(epochs).size).toBe(epochs.length);
     expect([...epochs].sort((a, b) => a - b)).toEqual(epochs);
   });

@@ -11,13 +11,6 @@ import type { MainTabParamList } from '@/types/navigation';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-/**
- * Three tabs, no centre FAB — a check-in is a deliberate act, so its button
- * lives in the Progress card instead.
- *
- * The bar itself is ours rather than the platform default, so the active tab
- * gets the tinted pill from artboard 2a.
- */
 export function BottomTabNavigator() {
   const renderTabBar = useCallback(
     (props: BottomTabBarProps) => <BottomTabBar {...props} />,

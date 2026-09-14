@@ -3,13 +3,10 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { formatDelta } from '@/utils/formatters';
 import { AppChip, type AppChipSize } from './AppChip';
 
-/** Inside this band a change is noise, matching the progress calculation. */
 const STEADY_BAND_KG = 0.05;
 
 export type DeltaBadgeProps = {
-  /** Change in kg. Null when there is nothing to compare against. */
   deltaKg: number | null;
-  /** Appended in the detail summary: "↓ 0.3 kg from last". */
   suffix?: string;
   size?: AppChipSize;
   style?: StyleProp<ViewStyle>;

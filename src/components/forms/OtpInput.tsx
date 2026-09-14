@@ -17,17 +17,12 @@ export type OtpInputProps = {
   onChange: (next: string) => void;
   hasError?: boolean;
   autoFocus?: boolean;
-  /** Carries the code because the caller's `value` is still one digit behind. */
   onComplete?: (code: string) => void;
   containerStyle?: StyleProp<ViewStyle>;
 };
 
 const BOX_HEIGHT = 64;
 
-/**
- * One transparent input stretched across all the boxes, so advancing,
- * backspacing and pasting come for free. The boxes only draw `value`.
- */
 export function OtpInput({
   value,
   onChange,
@@ -41,7 +36,6 @@ export function OtpInput({
 
   const handleChange = useCallback(
     (raw: string) => {
-      // Some number pads still offer punctuation, and a paste carries anything.
       const digits = raw.replace(/\D/g, '').slice(0, OTP_LENGTH);
       onChange(digits);
 
@@ -63,7 +57,6 @@ export function OtpInput({
       <View style={styles.boxes}>
         {Array.from({ length: OTP_LENGTH }, (_unused, index) => {
           const digit = value[index];
-          // The next empty box is the one the caret would be in.
           const active = index === value.length;
 
           return (
@@ -95,7 +88,6 @@ export function OtpInput({
         keyboardType="number-pad"
         maxLength={OTP_LENGTH}
         autoFocus={autoFocus}
-        // The boxes draw the position; a real caret would sit in the wrong place.
         caretHidden
         textContentType="oneTimeCode"
         autoComplete="sms-otp"
@@ -123,8 +115,6 @@ const styles = StyleSheet.create({
   boxRest: { borderWidth: 1 },
   boxEmphasis: { borderWidth: 1.5 },
   digit: { ...text.title, letterSpacing: -0.3 },
-  // Covers the boxes so a tap focuses it. Must stay mounted, or the keyboard
-  // closes on every keystroke.
   input: {
     position: 'absolute',
     top: 0,

@@ -1,15 +1,3 @@
-/**
- * The strip is where the card's honesty is either kept or lost.
- *
- * The domain already distinguishes a gap (`ratio: null`) from a recorded zero
- * (`ratio: 0`). These check that the distinction survives rendering — if a
- * zero drew as nothing, the app would be telling the user they never logged
- * something they did log.
- *
- * The marks are now glyphs rather than bars of varying height (a filled disc
- * for a hit, a hollow ring for a logged miss, a tiny point for a gap), so the
- * assertions are about shape and ink rather than about height.
- */
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Moon } from 'lucide-react-native';
@@ -49,7 +37,6 @@ const show = (value: Attainment, onSetGoal?: () => void) =>
     { wrapper: ThemeProvider },
   );
 
-/** RN flattens a style array left to right; later entries win. */
 const styleOf = (node: { props: { style?: unknown } }): Record<string, unknown> =>
   Object.assign({}, ...[node.props.style].flat(3).filter(Boolean));
 
@@ -59,7 +46,6 @@ describe('a gap and a zero must not look alike', () => {
       attainment({ bars: [bar(1, null), bar(2, 0)], recorded: 1 }),
     );
 
-    // Two slots, one recorded mark, one gap point — never two of either.
     expect(queryAllByTestId(`${TEST_ID}-bar`)).toHaveLength(1);
     expect(queryAllByTestId(`${TEST_ID}-gap`)).toHaveLength(1);
   });
@@ -70,7 +56,6 @@ describe('a gap and a zero must not look alike', () => {
     );
 
     const style = styleOf(getByTestId(`${TEST_ID}-bar`));
-    // A ring: outlined, deliberately not filled.
     expect(style.borderWidth).toBeGreaterThan(0);
     expect(style.backgroundColor).toBeUndefined();
   });
@@ -86,7 +71,6 @@ describe('a gap and a zero must not look alike', () => {
   });
 
   it('keeps a mark the same size however far it overshoots the goal', async () => {
-    // Three times the goal must not blow the strip out and squash the rest.
     const { getByTestId } = await show(
       attainment({ bars: [bar(1, 3, true)], recorded: 1, hits: 1 }),
     );
@@ -100,7 +84,6 @@ describe('a gap and a zero must not look alike', () => {
     const { getByTestId } = await show(attainment({ bars: [bar(1, null)] }));
 
     const style = styleOf(getByTestId(`${TEST_ID}-gap`));
-    // Much less ink than a recorded mark, and still visible.
     expect(style.width).toBe(3);
     expect(style.backgroundColor).toBeTruthy();
   });
@@ -112,10 +95,8 @@ describe('what it says', () => {
       attainment({ status: 'onTrack', recorded: 9, hits: 4, average: 400 }),
     );
 
-    // The rate is the headline: the figure and its denominator.
     expect(getByText('4')).toBeTruthy();
     expect(getByText('/9')).toBeTruthy();
-    // And the state is still named in a word, with the average beside it.
     expect(getByText('On track · 400m')).toBeTruthy();
   });
 
@@ -124,7 +105,6 @@ describe('what it says', () => {
       attainment({ status: 'notEnoughData', recorded: 2, hits: 2, average: 480 }),
     );
     expect(getByText(/2 logged/)).toBeTruthy();
-    // "2 of 2" would read as a perfect record off two nights.
     expect(queryByText(/2 of 2/)).toBeNull();
     expect(queryByText('/2')).toBeNull();
   });
@@ -136,7 +116,6 @@ describe('what it says', () => {
       onSetGoal,
     );
 
-    // The average is all it will say — no rate, no verdict.
     expect(getByText('470m')).toBeTruthy();
     expect(queryByText('/4')).toBeNull();
     expect(getByText('Set a goal')).toBeTruthy();
@@ -158,7 +137,6 @@ describe('what it says', () => {
     );
 
     expect(getByText('Nothing logged')).toBeTruthy();
-    // An em dash, never a zero the user never entered.
     expect(getByText('—')).toBeTruthy();
     expect(queryByText('0')).toBeNull();
   });

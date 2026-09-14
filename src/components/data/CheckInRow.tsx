@@ -23,58 +23,37 @@ import {
 } from '@/utils/formatters';
 import { DeltaBadge } from './DeltaBadge';
 
-/** Which value leads the row — see the file header. */
 export type CheckInRowVariant = 'date' | 'metrics';
 
 export type CheckInRowProps = {
   checkIn: CheckIn;
   deltaKg: number | null;
   onPress?: () => void;
-  /** Waiting in the sync queue — shows a clock and says so in the meta line. */
   pendingSync?: boolean;
-  /**
-   * Its sync gave up and needs the user. Takes precedence over `pendingSync`:
-   * a row cannot be both, and the one that needs attention is the one to show.
-   */
   failedSync?: boolean;
   now?: number;
-  /** Defaults to the original date-led row, so existing callers are unchanged. */
   variant?: CheckInRowVariant;
-  /**
-   * Only read by `variant="metrics"`, and only to decide whether a meter is
-   * full. `null` means the user has set no goal, so the meter shows the value
-   * as recorded and passes no judgement.
-   */
   sleepGoalMinutes?: number | null;
   waterGoalMl?: number | null;
-  /** Suffixed `-sleep` / `-water` on each meter, so the two can be told apart. */
   testID?: string;
   style?: StyleProp<ViewStyle>;
 };
 
-/** The meter is 48dp of track; a logged zero still gets 5 of them. */
 const TRACK_WIDTH = 48;
 const TRACK_HEIGHT = 5;
 const MIN_FILL = 5;
-/** No goal to measure against, so a fixed, deliberately partial bar. */
 const UNGRADED_FILL = 20;
 
 type Meter =
-  /** Met or beat the goal. */
   | { kind: 'hit'; fill: number }
-  /** Logged and under the goal — includes a real zero, at `MIN_FILL`. */
   | { kind: 'under'; fill: number }
-  /** Logged, but there is no goal, so no verdict. */
   | { kind: 'ungraded'; fill: number }
-  /** Nothing was logged. Draws no track at all. */
   | { kind: 'blank' };
 
 function meterFor(value: number | null, goal: number | null | undefined): Meter {
   if (value === null) {
     return { kind: 'blank' };
   }
-  // A zero target cannot be missed, so it is not a target — the same
-  // normalisation `buildAttainment` applies.
   if (goal === null || goal === undefined || goal <= 0) {
     return { kind: 'ungraded', fill: UNGRADED_FILL };
   }
@@ -113,7 +92,6 @@ function MetricMeter({
       <AppIcon icon={icon} size="sm" color={METER_ICON[meter.kind]} />
 
       {meter.kind === 'blank' ? (
-        // No track: absence of ink is what makes this unmistakably "not logged".
         <View style={styles.meterBed} testID={testID}>
           <View
             style={[styles.blankDot, { backgroundColor: colors.userChartSoft }]}
@@ -149,7 +127,6 @@ function MetricMeter({
   );
 }
 
-/** DeltaBadge's steady band, so the spoken label agrees with the pill. */
 const STEADY_BAND_KG = 0.05;
 
 const deltaPhrase = (deltaKg: number | null): string => {
@@ -205,7 +182,6 @@ export function CheckInRow({
     <AppIcon icon={Clock} size="sm" color="textHint" />
   ) : null;
 
-  // The original date-led row (dashboard).
   if (variant === 'date') {
     const meta = `${formatTime(checkIn.createdAt)} · ${formatWeightWithUnit(
       checkIn.weightKg,
@@ -242,7 +218,6 @@ export function CheckInRow({
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={`${date}, ${meta}`}
-        // No ripple: RN's bounded ripple mask is a rectangle. See AppButton.
         style={({ pressed }) => [styles.row, pressed && styles.pressed, style]}
       >
         {content}
@@ -250,14 +225,6 @@ export function CheckInRow({
     );
   }
 
-  // The metric-led row (history).
-
-  /**
-   * Spoken in full even though the row shows only the time, and even though
-   * sleep and water are drawn rather than written. The visuals are the only
-   * visual carrier now, so the label has to say everything in words — and the
-   * day heading is a sibling node a screen-reader user may already have passed.
-   */
   const spoken = [
     `${date}, ${formatTime(checkIn.createdAt)}`,
     `${formatWeightWithUnit(checkIn.weightKg)}, ${deltaPhrase(deltaKg)}`,
@@ -272,9 +239,11 @@ export function CheckInRow({
   const content = (
     <>
       {checkIn.mood === null ? (
-        // A hollow disc, not a neutral face: the app has no mood to show and
-        // must not invent one.
-        <View style={[styles.moodBlank, { borderColor: colors.userChartSoft }]} />
+        <View
+          style={[styles.moodLarge, { backgroundColor: colors.surfaceNeutral }]}
+        >
+          <AppIcon icon={moodIcon(null)} size="lg" color="textHint" />
+        </View>
       ) : (
         <View style={[styles.moodLarge, { backgroundColor: colors.userTint }]}>
           <AppIcon icon={moodIcon(checkIn.mood)} size="lg" color="userAccent" />
@@ -326,7 +295,6 @@ export function CheckInRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={spoken}
-      // No ripple: RN's bounded ripple mask is a rectangle. See AppButton.
       style={({ pressed }) => [
         styles.rowMetrics,
         pressed && styles.pressed,
@@ -356,7 +324,6 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
   pressed: { opacity: 0.6 },
 
-  // metrics variant ---------------------------------------------------------
   rowMetrics: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,14 +338,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  moodBlank: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    flexShrink: 0,
-  },
-  /** `minWidth: 0` so a long weight truncates instead of shoving the meters out. */
   weightBlock: { flex: 1, minWidth: 0, gap: 2 },
   weightRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2 },
@@ -390,7 +349,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     overflow: 'hidden',
   },
-  /** Track-shaped but unpainted — holds a blank or ungraded mark in place. */
   meterBed: {
     width: TRACK_WIDTH,
     height: TRACK_HEIGHT,

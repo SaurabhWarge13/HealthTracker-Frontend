@@ -13,9 +13,7 @@ import { radius, spacing } from '@/theme';
 
 export type StatTileProps = {
   label: string;
-  /** The measurement. Ignored by the invite variant. */
   value?: string;
-  /** Turns the tile into a call to action. */
   invite?: { label: string; onPress: () => void };
   style?: StyleProp<ViewStyle>;
 };
@@ -29,7 +27,6 @@ export function StatTile({ label, value, invite, style }: StatTileProps) {
         onPress={invite.onPress}
         accessibilityRole="button"
         accessibilityLabel={`${label}. ${invite.label}`}
-        // No ripple: RN's bounded ripple mask is a rectangle. See AppButton.
         style={({ pressed }) => [
           styles.tile,
           styles.inviteTile,
@@ -78,7 +75,6 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   inviteTile: {
-    // Wider than its siblings because "Add height" needs the room (3e).
     flex: 1.35,
     borderWidth: 1,
     borderStyle: 'dashed',

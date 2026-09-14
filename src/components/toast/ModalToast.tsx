@@ -1,8 +1,3 @@
-/**
- * A toast for use inside an RN `<Modal>`. The global `<Toast />` is mounted
- * under `NavigationContainer`, so one fired while a dialog is open is drawn
- * behind that dialog's native window and never seen.
- */
 import React, { useCallback, useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
 import { CreateToast, type ToastVariant } from './CreateToast';
@@ -10,9 +5,7 @@ import { CreateToast, type ToastVariant } from './CreateToast';
 export type ModalToastProps = {
   message: string;
   variant?: ToastVariant;
-  /** How long it holds at full opacity, between the two 300ms animations. */
   holdMs?: number;
-  /** Called once the exit animation has finished. */
   onHide: () => void;
 };
 
@@ -28,8 +21,6 @@ export function ModalToast({
 }: ModalToastProps) {
   const progress = useRef(new Animated.Value(0)).current;
 
-  // Kept in a ref so a caller that re-creates `onHide` each render cannot
-  // restart the animation half way through and strand the toast on screen.
   const onHideRef = useRef(onHide);
   useEffect(() => {
     onHideRef.current = onHide;

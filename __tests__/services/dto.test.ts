@@ -1,8 +1,3 @@
-/**
- * The wire mapping. Every case here is one that would fail silently: both
- * sides are the same JavaScript type, so nothing throws — the data is just
- * wrong afterwards.
- */
 import {
   toCheckIn,
   toCheckInBody,
@@ -50,9 +45,6 @@ const domain = (over: Partial<CheckIn> = {}): CheckIn => ({
 
 describe('toCheckIn', () => {
   it('takes recordedAt as createdAt, not the row insert time', () => {
-    // Ours is when the user took the reading — what ordering and the trend
-    // chart key on. Using the server's createdAt would reorder history the
-    // moment anything was entered late.
     const result = toCheckIn(dto());
     expect(result.createdAt).toBe(Date.parse('2026-09-06T08:00:00.000Z'));
     expect(result.createdAt).not.toBe(Date.parse('2026-09-07T12:00:00.000Z'));
@@ -70,7 +62,6 @@ describe('toCheckIn', () => {
       steps: 'healthConnect',
       water: 'manual',
     });
-    // Height is profile data in the domain, not something measured.
     expect('height' in result.sources).toBe(false);
   });
 
@@ -118,13 +109,6 @@ describe('toCheckInBody', () => {
     expect(Object.values(body.sources).every(value => value === 'manual')).toBe(true);
   });
 
-  /**
-   * The server's optional fields are `.optional()`, which accepts `undefined`
-   * only. A literal null fails the WHOLE request with
-   * "Invalid input: expected string, received null" — so an absent value must
-   * be an absent key. These are the cases that were breaking every check-in
-   * saved with a blank note.
-   */
   it('omits an empty note rather than sending null', () => {
     const body = toCheckInBody(domain({ notes: '   ' }));
     expect(body.notes).toBeUndefined();
@@ -153,7 +137,6 @@ describe('toCheckInBody', () => {
     ]) {
       expect(key in body).toBe(false);
     }
-    // The required fields survive, and sources keeps all five keys.
     expect(body.weightKg).toBe(72.4);
     expect(body.recordedAt).toBe('2026-09-06T08:00:00.000Z');
     expect(Object.keys(body.sources as object)).toHaveLength(5);
@@ -217,8 +200,6 @@ describe('profile mapping', () => {
   });
 
   it('sends every field that has a value, because PUT is a full replace', () => {
-    // A field left out is written as null rather than preserved, so anything
-    // the user actually has must be in the body or it is silently erased.
     const body = toProfileBody({
       name: 'Sam',
       baselineWeightKg: 76.5,
@@ -239,12 +220,6 @@ describe('profile mapping', () => {
     ]);
   });
 
-  /**
-   * `name` is `z.string().…optional()` on the server, so a null name fails the
-   * whole PUT — which is what kept `pendingSync` stuck on forever. Omitting is
-   * how the app says "absent"; `upsertProfile` stores `input.name ?? null`, so
-   * the full-replace behaviour is unchanged.
-   */
   it('omits unset fields rather than sending null', () => {
     const body = toProfileBody({
       name: '',
@@ -255,7 +230,6 @@ describe('profile mapping', () => {
       sleepGoalMinutes: null,
       targetWeightKg: null,
     });
-    // Only the one required field survives.
     expect(Object.keys(body)).toEqual(['baselineWeight']);
     expect(body.baselineWeight).toBe(76.5);
     expect('name' in body).toBe(false);

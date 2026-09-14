@@ -17,13 +17,11 @@ export type AppIconButtonProps = {
   icon: LucideIcon;
   onPress: () => void;
   accessibilityLabel: string;
-  /** Visual diameter. Touch target is padded to 48 regardless. */
   size?: number;
   iconSize?: AppIconSize;
   variant?: AppIconButtonVariant;
   color?: ColorName;
   disabled?: boolean;
-  /** Small dot in the top-right corner (notification bell). */
   badge?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -51,7 +49,6 @@ export function AppIconButton({
   const { colors } = useTheme();
   const background = BACKGROUND[variant];
 
-  // Grow the touch area to the 48pt minimum without changing the visuals.
   const slop = Math.max(0, (layout.minTapTarget - size) / 2);
 
   return (
@@ -62,7 +59,6 @@ export function AppIconButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       hitSlop={slop}
-      // No ripple: RN's bounded ripple mask is a rectangle. See AppButton.
       testID={testID}
       style={({ pressed }) => [
         styles.base,

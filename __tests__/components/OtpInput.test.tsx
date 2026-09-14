@@ -1,17 +1,9 @@
-/**
- * `render` is async in @testing-library/react-native 14 — see the note in
- * CreateToast.test.tsx.
- */
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { OtpInput } from '@/components/forms';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { OTP_LENGTH } from '@/domain/auth/validation';
 
-/**
- * Renders and hands back the single real field behind the boxes — everything is
- * typed into that one input, so every test needs it.
- */
 const renderOtp = async (ui: React.ReactElement) => {
   const view = await render(ui, { wrapper: ThemeProvider });
   return { ...view, field: view.getByLabelText('Verification code') };
@@ -34,10 +26,6 @@ describe('OtpInput — one field, drawn as boxes', () => {
     expect(onChange).toHaveBeenCalledWith('1234');
   });
 
-  /**
-   * The number pad still offers punctuation on some keyboards, and a pasted
-   * code can carry anything at all — a space, a dash, a trailing newline.
-   */
   it('strips everything that is not a digit', async () => {
     const onChange = jest.fn();
     const { field } = await renderOtp(<OtpInput value="" onChange={onChange} />);
@@ -68,12 +56,6 @@ describe('OtpInput — one field, drawn as boxes', () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  /**
-   * The regression this exists to prevent: `onComplete` used to take no
-   * argument, so a caller auto-submitting on it read the code from its own
-   * state — which is still the previous render's value, one digit short. Every
-   * auto-submit failed validation instead of sending.
-   */
   it('hands onComplete the finished code, not the stale one', async () => {
     const onComplete = jest.fn();
     const { field } = await renderOtp(
@@ -94,10 +76,6 @@ describe('OtpInput — one field, drawn as boxes', () => {
     expect(onComplete).toHaveBeenCalledWith('1234');
   });
 
-  /**
-   * Overtyping past the last box must not re-fire submit twice for one code —
-   * the value is capped to the same four digits, so nothing has changed.
-   */
   it('fires onComplete once per keystroke that completes the code', async () => {
     const onComplete = jest.fn();
     const { field } = await renderOtp(

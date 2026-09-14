@@ -1,11 +1,3 @@
-/**
- * The Health Connect slice's promises around device capability.
- *
- * The distinction under test: a device that can never use Health Connect shows
- * nothing, while one whose provider is merely missing, off or stale keeps its
- * card and offers a way out. Those used to be the same state, which is how the
- * feature became invisible on Android 9-13 without the provider installed.
- */
 import {
   healthConnectSyncFailed,
   healthConnectSynced,
@@ -27,7 +19,6 @@ const reduce = (
   ...actions: Parameters<typeof healthConnectReducer>[1][]
 ) => actions.reduce((current, action) => healthConnectReducer(current, action), state);
 
-/** Only the slice under test is real; these selectors read nothing else. */
 const asRoot = (healthConnect: HealthConnectState) =>
   ({ healthConnect } as RootState);
 
@@ -42,8 +33,6 @@ const RECOVERABLE: HealthConnectStatus[] = [
 
 describe('defaults', () => {
   it('has not checked the device yet, so nothing is assumed', () => {
-    // Without this flag, "we have not looked" is indistinguishable from
-    // "nothing granted", and a connected user gets a Connect prompt on launch.
     expect(initialHealthConnectState.hasChecked).toBe(false);
   });
 });
@@ -57,8 +46,6 @@ describe('recording an unusable provider', () => {
     );
 
     expect(state.status).toBe(status);
-    // A failed capability check is still a check: the card must not wait
-    // forever on an answer that is not coming.
     expect(state.hasChecked).toBe(true);
     expect(state.syncing).toBe(false);
   });
@@ -71,7 +58,6 @@ describe('recording an unusable provider', () => {
 
     const failed = reduce(withReadings, healthConnectSyncFailed('nope'));
 
-    // Blanking the card on a transient failure loses data we already have.
     expect(failed.today.steps).toBe(8432);
     expect(failed.hasChecked).toBe(true);
   });
@@ -83,8 +69,6 @@ describe('selectHealthConnectSupported — does the card exist at all', () => {
   });
 
   it.each(RECOVERABLE)('is true for %s, so the card can offer a way out', status => {
-    // This is the regression the change exists to prevent: these states used
-    // to hide every Health Connect surface with no explanation.
     expect(selectHealthConnectSupported(withStatus(status))).toBe(true);
   });
 
@@ -98,8 +82,6 @@ describe('selectHealthConnectUsable — can we actually read', () => {
   it.each([...RECOVERABLE, 'NOT_SUPPORTED' as const, 'NOT_CONNECTED' as const])(
     'is false for %s',
     status => {
-      // Onboarding step 3 keys its prefill on this, so a provider problem must
-      // never read as a usable connection.
       expect(selectHealthConnectUsable(withStatus(status))).toBe(false);
     },
   );
@@ -128,8 +110,6 @@ describe('selectHealthConnectProviderIssue — what to offer the user', () => {
   });
 
   it('offers nothing for a declined permission, which is a different problem', () => {
-    // NOT_CONNECTED means the user said no. Answering that with "install
-    // Health Connect" would be nonsense — it is already installed.
     expect(selectHealthConnectProviderIssue(withStatus('NOT_CONNECTED'))).toBeNull();
     expect(selectHealthConnectProviderIssue(withStatus('CONNECTED'))).toBeNull();
   });

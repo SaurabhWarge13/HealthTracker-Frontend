@@ -12,19 +12,14 @@ export type ScreenHeaderProps = {
   variant?: ScreenHeaderVariant;
   title?: string;
   subtitle?: string;
-  /** Shows a back/close button when provided. */
   onBack?: () => void;
   backIcon?: LucideIcon;
   backAccessibilityLabel?: string;
-  /** Right-hand text action — onboarding's "Skip". */
   actionLabel?: string;
   onAction?: () => void;
-  /** Right-hand icon action — the form's delete, detail's overflow. */
   actionIcon?: LucideIcon;
   actionIconLabel?: string;
-  /** Lets a caller measure the action button, e.g. to anchor a popover. */
   actionRef?: React.Ref<View>;
-  /** Paint the header on `surface` (nav/modal) instead of the page. */
   opaque?: boolean;
   style?: StyleProp<ViewStyle>;
 };
@@ -63,7 +58,6 @@ export function ScreenHeader({
           size={44}
         />
       ) : (
-        // Keeps the title centred/left-aligned whether or not back is shown.
         <View style={styles.backSpacer} />
       )}
 
@@ -114,7 +108,6 @@ const styles = StyleSheet.create({
   onboarding: {
     height: 56,
     paddingLeft: spacing.sm,
-    // Wider on the right so the Skip label clears the edge (artboard 1b).
     paddingRight: spacing.md,
   },
   standard: {

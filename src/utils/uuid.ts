@@ -4,5 +4,4 @@ export const createId = (): string => {
   return `local_${time}_${random}`;
 };
 
-/** True for ids this device minted, i.e. never yet acknowledged by a server. */
 export const isLocalId = (id: string): boolean => id.startsWith('local_');

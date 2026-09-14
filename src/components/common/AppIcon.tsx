@@ -19,9 +19,7 @@ export type AppIconProps = {
   icon: LucideIcon;
   size?: AppIconSize;
   color?: ColorName;
-  /** Override the token stroke (e.g. progress-ring icons). */
   strokeWidth?: number;
-  /** Decorative icons are hidden from screen readers. */
   accessibilityLabel?: string;
 };
 
@@ -49,5 +47,4 @@ export function AppIcon({
   );
 }
 
-/** Raw pixel size for a token — for layout maths (rings, tiles). */
 export const iconPixelSize = (size: AppIconSize): number => SIZE[size].size;

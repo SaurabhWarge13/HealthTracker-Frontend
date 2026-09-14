@@ -9,7 +9,6 @@ export type ProviderSetupPromptProps = {
   onAction: () => void;
 };
 
-/** Says what is wrong before what to do about it, so the button is no surprise. */
 const COPY: Record<ProviderIssue, { body: string; action: string }> = {
   missing: {
     body: "Health Connect isn't installed on this phone. Get it free and your steps, sleep and water track themselves.",

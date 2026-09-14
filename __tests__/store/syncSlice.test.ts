@@ -64,8 +64,6 @@ describe('opEnqueued', () => {
   });
 
   it('queues behind an op that is already on the wire', () => {
-    // Rewriting a request mid-send would either lose the edit or apply it
-    // twice, so the new one waits its turn.
     const first = op('create', 'a', checkIn('a', 72));
     const state = reduce(
       initialSyncState,
@@ -162,9 +160,6 @@ describe('op lifecycle', () => {
   });
 
   it('revives a failure caused by the connection when the device is back', () => {
-    // The retry budget is about two minutes. A longer outage used to strand
-    // the op behind a card the user had to find and tap, for something that
-    // had already fixed itself.
     const queued = op('create', 'a', checkIn('a'));
     const state = reduce(
       initialSyncState,
@@ -180,8 +175,6 @@ describe('op lifecycle', () => {
   });
 
   it('leaves a rejected payload failed, however good the connection is', () => {
-    // It will be rejected again. Re-running it quietly would put the queue in
-    // a loop the user cannot see.
     const queued = op('create', 'a', checkIn('a'));
     const state = reduce(
       initialSyncState,
@@ -220,19 +213,12 @@ describe('op lifecycle', () => {
 });
 
 describe('staleServerIdsPruned', () => {
-  /**
-   * The mapping outlives the op that created it, so nothing but this reducer
-   * can decide it is dead. Every case below is one where getting that wrong
-   * costs the user a check-in: a delete that can no longer name its row, or a
-   * row that comes back because its id was forgotten.
-   */
   const mapped = (serverIds: Record<string, string>): SyncState => ({
     ...initialSyncState,
     serverIds,
   });
 
   it('drops a mapping whose row the server no longer lists', () => {
-    // Deleted on another device: nothing here references it any more.
     const state = reduce(
       mapped({ local_1: 'srv_9' }),
       staleServerIdsPruned({ keep: [] }),
@@ -249,8 +235,6 @@ describe('staleServerIdsPruned', () => {
   });
 
   it('keeps a mapping a pending delete still needs', () => {
-    // Reconcile removes a locally-deleted row from `keep`, so the op scan is
-    // the only thing standing between this delete and losing its target.
     const state = reduce(
       mapped({ local_1: 'srv_9' }),
       opEnqueued(op('delete', 'local_1')),
@@ -267,7 +251,6 @@ describe('staleServerIdsPruned', () => {
       opFailed({ opId: queued.opId, message: 'nope', kind: 'server' }),
       staleServerIdsPruned({ keep: [] }),
     );
-    // The user has not decided yet; Retry must still be able to name the row.
     expect(state.serverIds).toEqual({ local_1: 'srv_9' });
   });
 
@@ -294,8 +277,6 @@ describe('staleServerIdsPruned', () => {
   });
 
   it('drops a self-mapping even while the row is live', () => {
-    // `resolveServerId` and `reconcileCheckIns` both fall back to the id
-    // itself, so this entry says nothing that its absence does not.
     const state = reduce(
       mapped({ srv_9: 'srv_9' }),
       staleServerIdsPruned({ keep: ['srv_9'] }),
@@ -314,10 +295,10 @@ describe('staleServerIdsPruned', () => {
   it('prunes only what is dead, in a mixed map', () => {
     const state = reduce(
       mapped({
-        local_1: 'srv_9', // live row
-        local_2: 'srv_8', // dead, but a delete needs it
-        local_3: 'srv_7', // dead
-        srv_6: 'srv_6', // redundant
+        local_1: 'srv_9',
+        local_2: 'srv_8',
+        local_3: 'srv_7',
+        srv_6: 'srv_6',
       }),
       opEnqueued(op('delete', 'local_2')),
       staleServerIdsPruned({ keep: ['local_1', 'srv_6'] }),
@@ -347,8 +328,6 @@ describe('resolveServerId', () => {
   });
 
   it('refuses to guess for an unsynced local id', () => {
-    // Sending this would only ever 404; compaction should have folded it into
-    // the create.
     expect(resolveServerId('local_2', {})).toBeNull();
   });
 });

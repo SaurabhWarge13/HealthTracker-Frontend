@@ -1,11 +1,3 @@
-/**
- * The two helpers history's day grouping rests on.
- *
- * Every date below is built with the local-time `Date` constructor, so these
- * assertions hold in any timezone — and would fail if either helper reached
- * for `toISOString()`, which files a 00:30 check-in under the previous UTC day
- * for anyone west of Greenwich.
- */
 import { dayKey, formatDayTitle, isSameDay } from '@/utils/formatters';
 
 describe('dayKey', () => {
@@ -15,7 +7,6 @@ describe('dayKey', () => {
   });
 
   it('keeps a just-after-midnight check-in on its own local day', () => {
-    // The case a UTC key gets wrong.
     expect(dayKey(new Date(2026, 8, 8, 0, 30).getTime())).toBe('2026-09-08');
     expect(dayKey(new Date(2026, 8, 8, 23, 30).getTime())).toBe('2026-09-08');
   });

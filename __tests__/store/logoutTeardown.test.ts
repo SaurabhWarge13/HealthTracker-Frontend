@@ -1,13 +1,3 @@
-/**
- * Logout is the account boundary, and this is the test that says so.
- *
- * The bug these cover was demonstrated on a device: user B signed in and
- * their dashboard rendered twelve of user A's check-ins. Two separate holes
- * led there — teardown that only cleared two slices, and an expiry path that
- * destroyed the one field the "is this a different person?" check reads.
- */
-// Importing the barrel is what injects the feature endpoints into `baseApi`;
-// without it `getProfile` does not exist to seed a cache entry against.
 import '@/services/api';
 import { baseApi } from '@/services/api/baseApi';
 import {
@@ -37,11 +27,6 @@ const checkIn = (id: string): CheckIn => ({
   sources: {},
 });
 
-/**
- * Tracked so it can be torn down: a seeded cache entry leaves RTK Query's
- * `keepUnusedDataFor` timer running well past the end of the test, and Jest
- * complains that the environment was dismantled underneath it.
- */
 let activeStore: ReturnType<typeof createAppStore> | null = null;
 
 beforeEach(() => {
@@ -55,7 +40,6 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-/** A signed-in account with something in every account-scoped slice. */
 const populatedStore = () => {
   const store = createAppStore();
   activeStore = store;
@@ -90,8 +74,6 @@ describe('loggedOut tears down every account-scoped slice', () => {
   it('leaves nothing of the account behind', () => {
     const store = populatedStore();
 
-    // Guard the guard: the fixture has to actually populate things, or this
-    // test would pass against a store that was empty all along.
     const before = store.getState();
     expect(before.checkins.allIds).toHaveLength(1);
     expect(before.sync.ops).toHaveLength(1);
@@ -120,7 +102,6 @@ describe('loggedOut tears down every account-scoped slice', () => {
 
   it('clears the RTK Query cache so the next account cannot read it', () => {
     const store = populatedStore();
-    // Seed the cache the way a real query would.
     store.dispatch(
       baseApi.util.upsertQueryData('getProfile' as never, undefined as never, {
         name: 'A',
@@ -128,8 +109,6 @@ describe('loggedOut tears down every account-scoped slice', () => {
     );
     expect(Object.keys(store.getState().api.queries).length).toBeGreaterThan(0);
 
-    // The one thing that cannot reset itself, so SettingsScreen dispatches it
-    // explicitly alongside loggedOut.
     store.dispatch(baseApi.util.resetApiState());
     store.dispatch(loggedOut());
 
@@ -144,10 +123,8 @@ describe('session expiry keeps the work but never hands it to someone else', () 
 
     const state = store.getState();
     expect(state.auth.hasSession).toBe(false);
-    // The user did not ask to throw anything away (§4.11).
     expect(state.checkins.allIds).toHaveLength(1);
     expect(state.sync.ops).toHaveLength(1);
-    // And we still know whose it is — the field the sign-in guard reads.
     expect(state.auth.userId).toBe('A');
   });
 
@@ -155,16 +132,10 @@ describe('session expiry keeps the work but never hands it to someone else', () 
     const store = populatedStore();
     store.dispatch(sessionExpired('Your session ended'));
 
-    /**
-     * The exact comparison `useSignIn` makes. Before the fix `previousUserId`
-     * was null here, so this evaluated false and user B kept user A's data —
-     * the leak reproduced on-device.
-     */
     const previousUserId = store.getState().auth.userId;
     const isDifferentUser = previousUserId !== null && previousUserId !== 'B';
     expect(isDifferentUser).toBe(true);
 
-    // Which sends the sign-in path down the clearing branch.
     store.dispatch(loggedOut());
     expect(store.getState().checkins.allIds).toEqual([]);
     expect(store.getState().sync.ops).toEqual([]);

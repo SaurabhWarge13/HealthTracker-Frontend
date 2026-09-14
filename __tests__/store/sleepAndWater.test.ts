@@ -1,12 +1,3 @@
-/**
- * The invariant that decides whether the card is trustworthy.
- *
- * A saved check-in's numbers are the user's from the moment they saved them.
- * `sources` records where each one originally came from, but the value belongs
- * to the check-in. So the habit card reads check-ins and the two goals and
- * NOTHING else — if it read `state.healthConnect`, revoking a permission would
- * appear to erase history the user still has on their device.
- */
 import { selectSleepAndWater } from '@/store/checkins/checkinsSelectors';
 import { checkInsReplaced } from '@/store/checkins/checkinsSlice';
 import { healthConnectSynced } from '@/store/healthConnect/healthConnectSlice';
@@ -24,7 +15,6 @@ const night = (id: string, sleepMinutes: number | null): CheckIn => ({
   waterMl: 2500,
   mood: null,
   notes: '',
-  // Recorded as coming from the device — the case that matters here.
   sources: { sleep: 'healthConnect', water: 'healthConnect' },
 });
 
@@ -55,7 +45,6 @@ describe('selectSleepAndWater', () => {
     const store = seeded();
     const before = selectSleepAndWater(store.getState());
 
-    // Everything the device could possibly tell us, taken away.
     store.dispatch(
       healthConnectSynced({
         status: 'NOT_CONNECTED',
@@ -71,7 +60,6 @@ describe('selectSleepAndWater', () => {
 
     const after = selectSleepAndWater(store.getState());
 
-    // Identical by reference: the selector did not even recompute.
     expect(after).toBe(before);
     expect(after.sleep.recorded).toBe(3);
   });
@@ -87,8 +75,6 @@ describe('selectSleepAndWater', () => {
       }),
     );
 
-    // The Today card moves; the habit card must not. It is a record of what
-    // the user saved, not a live view of the device.
     expect(selectSleepAndWater(store.getState())).toBe(before);
   });
 

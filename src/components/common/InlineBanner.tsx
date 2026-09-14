@@ -11,11 +11,8 @@ export type InlineBannerTone = 'neutral' | 'device';
 export type InlineBannerProps = {
   icon: LucideIcon;
   title: string;
-  /** Second line under the title, or trailing text on a single-line banner. */
   detail?: string;
-  /** Puts the detail at the end of the row instead of under the title. */
   detailPosition?: 'below' | 'trailing';
-  /** Buttons, close affordances — whatever the artboard puts on the right. */
   trailing?: React.ReactNode;
   tone?: InlineBannerTone;
   style?: StyleProp<ViewStyle>;

@@ -1,5 +1,4 @@
 const palette = {
-  // user / check-in data
   green900: '#0D5F4E',
   green900Pressed: '#0A4C3E',
   green700: '#167A62',
@@ -7,11 +6,10 @@ const palette = {
   greenChartSoft: '#C9DAD3',
   greenTint: '#E8F2EF',
   greenTintPressed: '#DCEAE5',
-  greenBright: '#4FC79E', // dark-mode lift
+  greenBright: '#4FC79E',
   greenBrightPressed: '#63D2AC',
-  greenDeep: '#07231C', // dark-mode text on accent
+  greenDeep: '#07231C',
 
-  // device / Health Connect data
   slate700: '#3F5A70',
   slate700Pressed: '#34495C',
   slate300: '#C3D0DA',
@@ -20,10 +18,9 @@ const palette = {
   slateIconMuted: '#B4BEC5',
   slateTint: '#EDF1F4',
   slateTintPressed: '#E2E8ED',
-  slateBright: '#8AA5BC', // dark-mode lift
+  slateBright: '#8AA5BC',
   slateBrightPressed: '#9BB4C8',
 
-  // neutrals — light
   ink: '#10161A',
   muted: '#5F6C72',
   hint: '#8A9299',
@@ -40,7 +37,6 @@ const palette = {
   disabled: '#A9BFB8',
   white: '#FFFFFF',
 
-  // neutrals — dark (values read off the dark artboards)
   pageDark: '#0E1412',
   cardDark: '#18201D',
   dividerDark: '#232C29',
@@ -63,7 +59,6 @@ const palette = {
   skeletonStrongDark: '#232C29',
   disabledDark: '#2E3B37',
 
-  // status
   statusImproving: '#167A62',
   statusSteady: '#B07A1F',
   statusOffTrack: '#C0553B',
@@ -77,14 +72,12 @@ const palette = {
 } as const;
 
 export type ThemeColors = {
-  /** Check-in / user-asserted data. Icon tiles, primary buttons, chart line. */
   userAccent: string;
   userAccentPressed: string;
   userTint: string;
   userTintPressed: string;
   userChart: string;
   userChartSoft: string;
-  /** Health Connect / device-observed data. Icon tiles, rings, source chips. */
   deviceAccent: string;
   deviceAccentPressed: string;
   deviceTint: string;
@@ -112,7 +105,6 @@ export type ThemeColors = {
   disabledFill: string;
   skeleton: string;
   skeletonStrong: string;
-  /** Dialog overlay. Darker in dark mode so the card still separates. */
   scrim: string;
 
   statusImproving: string;

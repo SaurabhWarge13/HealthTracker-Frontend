@@ -11,12 +11,10 @@ import {
 export type AppTextProps = TextProps & {
   variant?: TextVariant;
   color?: ColorName;
-  /** Tabular figures — use for any number that must align on the decimal. */
   numeric?: boolean;
   align?: TextStyle['textAlign'];
 };
 
-/** Cap OS font scaling so numeric layouts don't break, without disabling it. */
 const MAX_FONT_SCALE = 1.3;
 
 export function AppText({

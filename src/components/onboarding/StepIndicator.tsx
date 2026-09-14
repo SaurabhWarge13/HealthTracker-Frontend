@@ -4,7 +4,6 @@ import { useTheme } from '@/hooks/useTheme';
 import { spacing } from '@/theme';
 
 export type StepIndicatorProps = {
-  /** 1-based. */
   current: number;
   total?: number;
   style?: StyleProp<ViewStyle>;

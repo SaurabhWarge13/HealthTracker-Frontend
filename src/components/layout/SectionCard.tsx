@@ -18,13 +18,9 @@ export type SectionCardProps = {
   subtitle?: string;
   tone?: IconTileTone;
   children?: React.ReactNode;
-  /** Row below a second divider — "Synced 10:32 AM · Manage ›". */
   footer?: React.ReactNode;
-  /** Makes the whole header tappable and shows a chevron. */
   onPress?: () => void;
-  /** Custom right-hand header content (overrides the chevron). */
   headerAccessory?: React.ReactNode;
-  /** Drop the body padding when the child manages its own (row lists). */
   bodyPadding?: boolean;
   style?: StyleProp<ViewStyle>;
 };
@@ -72,7 +68,6 @@ export function SectionCard({
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
-          // No ripple: RN's bounded ripple mask is a rectangle. See AppButton.
           style={({ pressed }) => pressed && styles.pressed}
         >
           {header}

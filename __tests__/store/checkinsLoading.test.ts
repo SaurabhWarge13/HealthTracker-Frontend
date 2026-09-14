@@ -1,10 +1,3 @@
-/**
- * "We have not looked yet" versus "there is nothing to see".
- *
- * These look identical in state and mean opposite things to the user, and
- * confusing them is what made the dashboard show an empty state, replace it
- * with a skeleton, then show it again.
- */
 import { selectCheckInsUnsettled } from '@/store/checkins/checkinsSelectors';
 import {
   checkInsFetchFailed,
@@ -30,7 +23,6 @@ const checkIn: CheckIn = {
   sources: {},
 };
 
-/** Only the two slices the selector reads. */
 const stateWith = (
   checkins = initialCheckInsState,
   isOnline = true,
@@ -42,8 +34,6 @@ const stateWith = (
 
 describe('selectCheckInsUnsettled', () => {
   it('waits before claiming an account is empty', () => {
-    // The gap between the screen mounting and its request starting: loading is
-    // still false and nothing is fetched, but "empty" would be a guess.
     expect(selectCheckInsUnsettled(stateWith())).toBe(true);
   });
 
@@ -64,7 +54,6 @@ describe('selectCheckInsUnsettled', () => {
   });
 
   it('settles when the fetch failed — we asked, and got nothing', () => {
-    // Otherwise a dead server holds a skeleton on screen forever.
     const checkins = [checkInsFetchStarted(1_000), checkInsFetchFailed()].reduce(
       checkinsReducer,
       initialCheckInsState,
@@ -81,8 +70,6 @@ describe('selectCheckInsUnsettled', () => {
   });
 
   it('shows a restored list immediately, before any fetch', () => {
-    // A returning user reads their own data while the refresh happens behind
-    // it — a skeleton over data they can already see would be worse.
     const restored = {
       ...initialCheckInsState,
       byId: { srv_1: checkIn },
@@ -103,7 +90,6 @@ describe('checkInsFetchStarted', () => {
     const state = checkinsReducer(initialCheckInsState, checkInsFetchStarted(1_000));
     expect(state.loading).toBe(true);
     expect(state.lastAttemptAt).toBe(1_000);
-    // Nothing came back yet, so this stays null.
     expect(state.fetchedAt).toBeNull();
   });
 

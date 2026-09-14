@@ -9,10 +9,6 @@ export function useKeyboardVisible(enabled = true): boolean {
       return;
     }
 
-    /**
-     * `will*` on iOS so the layout changes with the keyboard's slide rather
-     * than snapping after it lands. Android only ever fires `did*`.
-     */
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
@@ -25,6 +21,5 @@ export function useKeyboardVisible(enabled = true): boolean {
     };
   }, [enabled]);
 
-  // Never report a stale `true` from before the subscription was turned off.
   return enabled && visible;
 }

@@ -1,8 +1,3 @@
-/**
- * The first component test in this repo. Note `render` is async in
- * @testing-library/react-native 14 — it must be awaited or every query
- * afterwards reports "`render` function has not been called".
- */
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { CreateToast, type ToastVariant } from '@/components/toast';
@@ -29,10 +24,6 @@ describe('CreateToast', () => {
     expect(toJSON()).toBeNull();
   });
 
-  /**
-   * The live region is what makes a toast reachable at all on a screen
-   * reader — it appears and disappears without focus ever moving to it.
-   */
   it.each<ToastVariant>(['success', 'error', 'info'])(
     'announces the %s variant politely',
     async variant => {
@@ -53,10 +44,6 @@ describe('CreateToast', () => {
     expect(getByRole('alert')).toBeTruthy();
   });
 
-  /**
-   * Spec §4.4: a queued check-in is safe on the device, not an error. The
-   * neutral variant must not escalate itself to an assertive announcement.
-   */
   it('does not raise an alert on the neutral variant', async () => {
     const { queryByRole } = await renderToast(
       <CreateToast text="Saved on this device" variant="info" />,

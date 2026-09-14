@@ -9,14 +9,11 @@ import { AppText } from './AppText';
 
 export type EmptyStateProps = {
   icon: LucideIcon;
-  /** Omitted for the inline dashboard variant, which leads with the copy. */
   title?: string;
   message: string;
   actionLabel?: string;
   onAction?: () => void;
-  /** Dashed reads as "this is missing"; solid as "nothing here yet". */
   dashed?: boolean;
-  /** 64 inline in a card, 72 as a full-card state. */
   ringSize?: 64 | 72;
   iconSize?: AppIconSize;
   style?: StyleProp<ViewStyle>;

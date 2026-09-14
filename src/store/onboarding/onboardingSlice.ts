@@ -4,32 +4,16 @@ import { profileCompleted } from '@/store/profile/profileSlice';
 
 export type OnboardingStep = 1 | 2 | 3 | 4;
 
-/**
- * Health Connect is a deliberate choice, not a default: the user must pick
- * one before leaving step 2, and we never re-prompt after a skip.
- */
 export type HealthConnectChoice = 'pending' | 'connect' | 'skipped';
 
 export type OnboardingState = {
   step: OnboardingStep;
   name: string;
-  /**
-   * Which button the user pressed on step 2 — a record that they were asked
-   * and answered, nothing more.
-   *
-   * NOT the connection state. Permissions are granted and revoked outside
-   * this app, so this goes stale the moment anything changes in system
-   * settings; screens read `state.healthConnect.status` instead. Treating
-   * this as truth is what made step 3 offer to connect an already-connected
-   * device.
-   */
   healthConnectChoice: HealthConnectChoice;
   weightKg: number | null;
   heightCm: number | null;
   stepGoal: number | null;
-  /** Integer millilitres even though the UI shows litres. */
   waterGoalMl: number | null;
-  /** Minutes even though the UI asks for hours, matching a check-in. */
   sleepGoalMinutes: number | null;
   targetWeightKg: number | null;
 };
@@ -62,11 +46,6 @@ const onboardingSlice = createSlice({
     ) {
       state.healthConnectChoice = action.payload;
     },
-    /**
-     * Both fields are required on step 3, so neither arrives null. The state
-     * they land in stays nullable — the draft starts empty and step 3 may not
-     * have been reached yet.
-     */
     baselineSaved(
       state,
       action: PayloadAction<{ weightKg: number; heightCm: number }>,
@@ -93,23 +72,8 @@ const onboardingSlice = createSlice({
     },
   },
   extraReducers: builder => {
-    /**
-     * The draft is scratch space. Once `Finish setup` has copied it into the
-     * profile it has no reason to exist, and leaving it behind means a second
-     * stale copy of the user's name, weight, height and goals sits in MMKV
-     * shadowing the real one — waiting for some future "resume onboarding"
-     * check to trust it.
-     *
-     * Handled here rather than in GoalsScreen so the invariant belongs to the
-     * slice: no call site has to remember to tidy up after itself.
-     */
     builder.addCase(profileCompleted, () => initialOnboardingState);
 
-    /**
-     * Same reasoning, different trigger: the draft holds the user's name,
-     * weight, height and goals, so it is account-scoped and cannot outlive
-     * the account. Logout is the boundary (authSlice).
-     */
     builder.addCase(loggedOut, () => initialOnboardingState);
   },
 });

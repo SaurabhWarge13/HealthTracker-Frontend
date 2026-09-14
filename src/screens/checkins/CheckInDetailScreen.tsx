@@ -57,23 +57,16 @@ export function CheckInDetailScreen({
   const menuButtonRef = useRef<RNView>(null);
 
   const openMenu = useCallback(() => {
-    // Measured in window space so the popover lands under the button.
     menuButtonRef.current?.measureInWindow((x, y, width, height) => {
       setAnchor({ x, y, width, height });
       setMenuOpen(true);
     });
   }, []);
 
-  /**
-   * Deferred until the popover's own Modal has finished dismissing: iOS
-   * refuses to present the share sheet while another modal is still on screen.
-   */
   const handleShare = useCallback(() => {
     setMenuOpen(false);
     InteractionManager.runAfterInteractions(() => {
-      Share.share({ message: buildCheckInLink(id) }).catch(() => {
-        // Dismissing the sheet rejects on some Android OEM builds; not a crash.
-      });
+      Share.share({ message: buildCheckInLink(id) }).catch(() => {});
     });
   }, [id]);
 
@@ -83,12 +76,6 @@ export function CheckInDetailScreen({
     navigation.goBack();
   }, [dispatch, id, navigation]);
 
-  /**
-   * The entry vanished while this screen was open — deleted from here, or
-   * from another screen. Deep links no longer reach this branch: they resolve
-   * the id first and route to CheckInNotFound. Same card either way, so a
-   * missing entry looks the same however the user got here.
-   */
   if (checkIn === null) {
     return (
       <AppScreen
@@ -124,7 +111,6 @@ export function CheckInDetailScreen({
       }
       contentStyle={styles.content}
     >
-      {/* Summary */}
       <View style={[styles.summary, { backgroundColor: colors.surface }]}>
         <View style={styles.summaryText}>
           <View style={styles.weightRow}>
@@ -150,7 +136,6 @@ export function CheckInDetailScreen({
         </View>
       </View>
 
-      {/* Measurements, each with its provenance */}
       <SectionCard
         icon={Activity}
         tone="device"

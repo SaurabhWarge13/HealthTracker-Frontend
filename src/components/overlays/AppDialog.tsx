@@ -10,7 +10,6 @@ import { layout, radius, spacing } from '@/theme';
 export type AppDialogAction = {
   label: string;
   onPress: () => void;
-  /** Renders as the danger text button. */
   destructive?: boolean;
 };
 
@@ -18,21 +17,11 @@ export type AppDialogProps = {
   visible: boolean;
   title: string;
   message: string;
-  /** Small tinted tile above the title (6c). */
   icon?: LucideIcon;
   confirm: AppDialogAction;
-  /**
-   * A third choice, between the primary and Cancel. Only the stacked layout
-   * has room for it — a dialog that has to offer "sync", "discard" and "back
-   * out" cannot fit them on one row and stay readable.
-   */
   secondary?: AppDialogAction;
   cancelLabel?: string;
   onCancel: () => void;
-  /**
-   * 'row' puts Cancel and the action side by side (5f);
-   * 'stacked' gives the primary its own full-width row (6c).
-   */
   layout?: 'row' | 'stacked';
 };
 
@@ -50,7 +39,6 @@ export function AppDialog({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  // A destructive choice must be made, not dismissed by accident.
   const dismissible = confirm.destructive !== true;
   const handleDismiss = dismissible ? onCancel : undefined;
 

@@ -11,7 +11,6 @@ export const calculateBmi = (
   return weightKg / (metres * metres);
 };
 
-/** BMI for one snapshot, preferring the height recorded with it. */
 export const bmiForCheckIn = (
   checkIn: CheckIn,
   profileHeightCm: number | null,
@@ -20,7 +19,6 @@ export const bmiForCheckIn = (
   return heightCm === null ? null : calculateBmi(checkIn.weightKg, heightCm);
 };
 
-/** Dashboard BMI: the latest check-in, same height fallback. */
 export const currentBmi = (
   checkIns: readonly CheckIn[],
   profileHeightCm: number | null,

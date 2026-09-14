@@ -16,28 +16,17 @@ import { AppText } from './AppText';
 
 export type AppInputSize = 'inline' | 'md' | 'lg' | 'xl';
 
-/** How the typed value is set: normal body text, or a big bold number. */
 export type AppInputValueSize = 'body' | 'display';
 
 export type AppInputProps = Omit<TextInputProps, 'style'> & {
   label?: string;
-  /** Sits beside the label — the "Optional" chip on artboards 1d/1e. */
   labelBadge?: React.ReactNode;
-  /** Right-hand end of the label row — the source chip on 1d/4a. */
   labelRight?: React.ReactNode;
-  /**
-   * inline 48 (compact, tinted, right-aligned — goal rows)
-   * md 56 (default) · lg 60 (24/700 value) · xl 64 (onboarding, radius 16)
-   */
   size?: AppInputSize;
-  /** Typography of the value. Independent of `size`; defaults to body text. */
   valueSize?: AppInputValueSize;
   leadingIcon?: LucideIcon;
-  /** Static unit text after the value: kg, cm, steps, L. */
   suffix?: string;
-  /** Arbitrary trailing content (e.g. the moon icon on the sleep field). */
   trailing?: React.ReactNode;
-  /** Renders a show/hide password button. */
   secureToggle?: boolean;
   helper?: string;
   error?: string;
@@ -54,12 +43,6 @@ const FIELD: Record<
   xl: { height: 64, radius: radius.card, paddingHorizontal: 18 },
 };
 
-/**
- * Value typography is INDEPENDENT of field height: artboard 1b's name field
- * is 64pt tall with 15/500 text, while 1d's weight field is the same height
- * with 24/700. Callers pick the treatment; `MeasurementField` defaults to
- * 'display' because measurements are the numbers worth shouting.
- */
 const VALUE_STYLE: Record<AppInputValueSize, object> = {
   body: text.body,
   display: { ...text.title, letterSpacing: -0.3 },
@@ -120,7 +103,6 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInputBa
     ? colors.userAccent
     : colors.border;
 
-  // Inline fields are filled, not outlined: page tint at rest, green when focused.
   const fieldBackground = !editable
     ? colors.surfaceNeutral
     : isInline
@@ -171,7 +153,6 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInputBa
           secureTextEntry={secureToggle && !revealed}
           placeholderTextColor={colors.textHint}
           selectionColor={colors.userAccent}
-          // Android's theme draws a material underline inside the field.
           underlineColorAndroid="transparent"
           maxFontSizeMultiplier={1.3}
           accessibilityLabel={label}
@@ -260,8 +241,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    // RN adds vendor padding to TextInput on Android; zero it so the
-    // 56pt field height is exactly what the design says.
     padding: 0,
   },
   inputMultiline: {
@@ -269,14 +248,12 @@ const styles = StyleSheet.create({
     lineHeight: scaleFont(22),
   },
   secureToggle: {
-    // Pull the 40pt button into the field's 16pt padding, as the design does.
     marginRight: -10,
   },
   message: {
     marginTop: spacing.sm,
     marginHorizontal: 2,
   },
-  /** Tighter, because it sits under the error rather than under the field. */
   messageUnderError: {
     marginTop: spacing.xs,
     marginHorizontal: 2,

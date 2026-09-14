@@ -6,23 +6,22 @@ import { OtpInput } from '@/components/forms';
 import { IconTile, ScreenHeader } from '@/components/layout';
 import { API_ERROR_CODES, authMessage } from '@/domain/api/errors';
 import { OTP_LENGTH, otpSchema } from '@/domain/auth/validation';
+import { useKeyboardSafeNav } from '@/hooks/useKeyboardSafeNav';
 import { useSignIn } from '@/hooks/useSignIn';
 import { useToast } from '@/hooks/useToast';
 import { spacing } from '@/theme';
 import type { AuthScreenProps } from '@/types/navigation';
 
-// Signup only parks the credentials; the account is created here, which is
-// why this screen and not Signup is what starts the session.
 export function VerifyOtpScreen({
   navigation,
   route,
 }: AuthScreenProps<'VerifyOtp'>) {
   const { email } = route.params;
   const { verifyOtp, submitting } = useSignIn();
+  const safeNav = useKeyboardSafeNav();
   const showToast = useToast();
 
   const [code, setCode] = useState('');
-  // Only drives the boxes' red border; the message itself lives in the toast.
   const [hasError, setHasError] = useState(false);
 
   const handleChange = useCallback((next: string) => {
@@ -30,10 +29,7 @@ export function VerifyOtpScreen({
     setHasError(false);
   }, []);
 
-  // Verification only ever runs from the button — a full code is not on its own
-  // a signal that the user is done typing.
   const handlePress = useCallback(async () => {
-    // Repeated taps can both land; one request per code.
     if (submitting) {
       return;
     }
@@ -51,21 +47,16 @@ export function VerifyOtpScreen({
     const result = await verifyOtp({ email, code: parsed.data.code });
 
     if (result.ok) {
-      // Nothing to navigate to: `sessionStarted` already swapped the stack.
-      // The toast host sits above both, so this survives the transition.
       Keyboard.dismiss();
       showToast('Account created', 'success');
       return;
     }
 
-    // A wrong code gets its own wording; anything else (offline, server down)
-    // keeps the message that actually describes what happened.
     const message =
       result.error.code === API_ERROR_CODES.INVALID_OTP
         ? 'Invalid OTP'
         : authMessage(result.error);
 
-    // The keyboard stays up so a mistyped digit is one tap to fix.
     setHasError(true);
     showToast(message, 'error');
   }, [code, email, showToast, submitting, verifyOtp]);
@@ -80,7 +71,7 @@ export function VerifyOtpScreen({
         <ScreenHeader
           variant="onboarding"
           opaque={false}
-          onBack={navigation.goBack}
+          onBack={() => safeNav(navigation.goBack)}
         />
       }
     >

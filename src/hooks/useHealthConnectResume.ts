@@ -7,8 +7,6 @@ export function useHealthConnectResume(): void {
   const previous = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
-    // Once on mount, so a returning user sees live data before touching
-    // anything. Never prompts — this is a read of what we already hold.
     refresh();
 
     const subscription = AppState.addEventListener('change', next => {

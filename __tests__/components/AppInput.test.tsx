@@ -1,7 +1,3 @@
-/**
- * `render` is async in @testing-library/react-native 14 — see the note in
- * CreateToast.test.tsx.
- */
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { AppInput } from '@/components/common';
@@ -30,10 +26,6 @@ describe('AppInput — the message slot under the field', () => {
     expect(getByText('Enter sleep between 0 and 24 hours.')).toBeTruthy();
   });
 
-  /**
-   * The regression this stacking exists to prevent: an error used to *replace*
-   * the helper, so "Up to 24h" vanished exactly when the value was wrong.
-   */
   it('shows the helper and the error together', async () => {
     const { getByText } = await renderInput(
       <AppInput

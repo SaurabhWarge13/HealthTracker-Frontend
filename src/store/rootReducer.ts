@@ -10,8 +10,6 @@ import { settingsReducer } from './settings/settingsSlice';
 import { syncReducer } from './sync/syncSlice';
 
 export const rootReducer = combineReducers({
-  // Every injected feature file shares this one path. Never persisted — it is
-  // a request cache, not state the user owns.
   [baseApi.reducerPath]: baseApi.reducer,
   auth: authReducer,
   checkins: checkinsReducer,

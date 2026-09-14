@@ -6,6 +6,7 @@ import { Activity, Info } from 'lucide-react-native';
 import { AppButton, InlineNote } from '@/components/common';
 import { MeasurementField } from '@/components/checkins';
 import { OnboardingStepLayout } from '@/components/onboarding';
+import { useKeyboardSafeNav } from '@/hooks';
 import {
   baselineSchema,
   type BaselinePayload,
@@ -28,32 +29,14 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
   const draft = useAppSelector(selectOnboardingDraft);
   const readings = useAppSelector(selectTodayReadings);
   const heightRef = useRef<TextInput>(null);
+  const safeNav = useKeyboardSafeNav();
 
-  /**
-   * Read from the device's real state, not from which button was tapped on
-   * step 2. The recorded choice goes stale the moment anything happens
-   * outside the app — a permission revoked in system settings, or a grant
-   * that was already in place before onboarding started — and this screen
-   * would then either offer to connect something already connected, or claim
-   * a connection that no longer exists.
-   */
   const connected = useAppSelector(selectHealthConnectUsable);
   const hcStatus = useAppSelector(selectHealthConnectStatus);
   const hcChecked = useAppSelector(state => state.healthConnect.hasChecked);
 
-  /**
-   * Only offer the button when connecting could actually work. A device with
-   * no Health Connect at all gets neither the offer nor the excuse — it just
-   * gets the fields.
-   */
   const canConnect = hcChecked && hcStatus === 'NOT_CONNECTED';
 
-  /**
-   * Real device readings, taken once on mount so the fields do not shift
-   * under someone mid-edit. A stale weight is left out rather than offered:
-   * a month-old number quietly accepted as a baseline poisons every later
-   * comparison.
-   */
   const prefill = useRef({
     weight:
       connected && isWeightUsable(readings.weightRecordedAt, Date.now())
@@ -62,12 +45,9 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
     height: connected && readings.heightCm !== null ? String(readings.heightCm) : '',
   }).current;
 
-  /** Only claim a value came from the device when one actually did. */
   const weightFromDevice = connected && prefill.weight !== '';
   const heightFromDevice = connected && prefill.height !== '';
 
-  // Three generics because zod transforms the typed strings into numbers:
-  // the form holds text, the submit handler receives the parsed payload.
   const { control, handleSubmit, formState } = useForm<
     BaselineValues,
     unknown,
@@ -76,8 +56,6 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
     resolver: zodResolver(baselineSchema),
     mode: 'onTouched',
     defaultValues: {
-      // Anything the user already typed wins over what the device offers —
-      // their own number is never overwritten.
       weight: draft.weightKg !== null ? String(draft.weightKg) : prefill.weight,
       height: draft.heightCm !== null ? String(draft.heightCm) : prefill.height,
     },
@@ -88,13 +66,14 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
   }, [dispatch]);
 
   const onSubmit = useCallback(
-    (values: BaselinePayload) => {
-      dispatch(
-        baselineSaved({ weightKg: values.weight, heightCm: values.height }),
-      );
-      navigation.navigate('Goals');
-    },
-    [dispatch, navigation],
+    (values: BaselinePayload) =>
+      safeNav(() => {
+        dispatch(
+          baselineSaved({ weightKg: values.weight, heightCm: values.height }),
+        );
+        navigation.navigate('Goals');
+      }),
+    [dispatch, navigation, safeNav],
   );
 
   const submit = handleSubmit(onSubmit);
@@ -104,12 +83,11 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
       step={3}
       title="Where are you starting from?"
       subtitle={
-        // Only say we pulled something across when we actually did.
         weightFromDevice || heightFromDevice
           ? 'We pulled these across. Edit anything that looks off.'
           : undefined
       }
-      onBack={navigation.goBack}
+      onBack={() => safeNav(navigation.goBack)}
       footer={
         <AppButton
           label="Continue"
@@ -120,11 +98,6 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
         />
       }
     >
-      {/*
-        Three states, three different true things to say. Saying nothing when
-        connected would leave someone who just granted permission wondering
-        whether it took.
-      */}
       {canConnect ? (
         <InlineNote icon={Info} variant="bodySmall" style={styles.note}>
           Health Connect isn't connected, so enter these yourself.
@@ -171,7 +144,7 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
           size={52}
           fullWidth
           icon={Activity}
-          onPress={() => navigation.navigate('HealthConnect')}
+          onPress={() => safeNav(() => navigation.navigate('HealthConnect'))}
           style={styles.connectInstead}
         />
       ) : null}

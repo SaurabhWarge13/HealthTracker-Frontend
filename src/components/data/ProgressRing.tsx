@@ -9,7 +9,6 @@ export type RingState = 'value' | 'noData' | 'notConnected';
 
 export type ProgressRingProps = {
   icon: LucideIcon;
-  /** 0–1. Clamped; values over 1 fill the ring rather than wrapping. */
   progress?: number;
   state?: RingState;
   size?: number;
@@ -32,8 +31,6 @@ export function ProgressRing({
   const circumference = 2 * Math.PI * r;
   const filled = Math.max(0, Math.min(1, progress)) * circumference;
 
-  // No permission dims the track itself, so the ring reads as absent rather
-  // than as an empty measurement.
   const trackColor =
     state === 'notConnected' ? colors.deviceTrackOff : colors.deviceTrack;
 
@@ -65,7 +62,6 @@ export function ProgressRing({
             strokeWidth={STROKE}
             strokeLinecap="round"
             strokeDasharray={`${filled} ${circumference}`}
-            // Start the arc at 12 o'clock instead of 3.
             transform={`rotate(-90 ${centre} ${centre})`}
           />
         ) : null}

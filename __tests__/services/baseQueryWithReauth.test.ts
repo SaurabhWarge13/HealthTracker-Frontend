@@ -1,8 +1,3 @@
-/**
- * The refresh path, which is the one piece of Step B that cannot be checked
- * by hand: the concurrency case needs two requests failing at the same moment,
- * and the rotation case needs a token that dies mid-flight.
- */
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
 
 const mockRawBaseQuery = jest.fn();
@@ -39,7 +34,6 @@ const REFRESHED = {
 let dispatch: jest.Mock;
 const api = () => ({ dispatch, getState: () => ({}), endpoint: 'getProfile' }) as never;
 
-/** Every call after the first N behaves as a success. */
 const respond = (...responses: unknown[]) => {
   for (const response of responses) {
     mockRawBaseQuery.mockImplementationOnce(() => Promise.resolve(response));
@@ -54,7 +48,6 @@ beforeEach(() => {
   mockClearRefreshToken.mockResolvedValue(undefined);
 });
 
-/** Calls that went to the refresh endpoint, whatever else happened. */
 const refreshCalls = () =>
   mockRawBaseQuery.mock.calls.filter(
     call => (call[0] as { url?: string }).url === API_PATHS.REFRESH,
@@ -140,7 +133,6 @@ describe('401s that must NOT trigger a refresh', () => {
 
 describe('single-flight — mandatory because the token rotates', () => {
   it('refreshes once for several requests failing together', async () => {
-    // Three requests 401, then one refresh, then three replays.
     mockRawBaseQuery.mockImplementation((args: { url?: string }) => {
       if (args.url === API_PATHS.REFRESH) {
         return Promise.resolve(ok(REFRESHED));
@@ -157,8 +149,6 @@ describe('single-flight — mandatory because the token rotates', () => {
       baseQueryWithReauth({ url: '/c' }, api(), {}),
     ]);
 
-    // Without the lock, the second and third would send an already-rotated
-    // token and sign the user out of a live session.
     expect(refreshCalls()).toHaveLength(1);
     for (const result of results) {
       expect(result.data).toEqual({ replayed: true });
@@ -178,8 +168,6 @@ describe('when the session is really over', () => {
     const expiry = dispatch.mock.calls.find(
       ([action]) => action.type === sessionExpired.type,
     );
-    // The API is single-session, so this is the likeliest cause and the user
-    // deserves to be told rather than left guessing.
     expect(expiry?.[0].payload).toMatch(/another device/i);
     expect(mockClearRefreshToken).toHaveBeenCalled();
   });
@@ -197,8 +185,6 @@ describe('when the session is really over', () => {
   });
 
   it('keeps the session alive when only the keystore write fails', async () => {
-    // A device with no usable keystore failed at sign-in too; ending the
-    // session here would make the app unusable rather than merely forgetful.
     mockSaveRefreshToken.mockResolvedValue(false);
     respond(fail(401, API_ERROR_CODES.NO_TOKEN), ok(REFRESHED), ok({ fine: true }));
 
@@ -208,8 +194,6 @@ describe('when the session is really over', () => {
     expect(dispatch).toHaveBeenCalledWith(
       tokensRefreshed({ accessToken: 'new-access' }),
     );
-    // The stored token is stale now, so the next cold start goes to Login
-    // rather than making a refresh call that is guaranteed to fail.
     expect(mockClearRefreshToken).toHaveBeenCalled();
   });
 });

@@ -17,12 +17,6 @@ const STEP_ROUTE: Record<number, keyof OnboardingStackParamList> = {
   4: 'Goals',
 };
 
-/**
- * Rendered by RootNavigator when a session exists but the profile is not
- * complete. The entry point comes from the saved draft step, so an
- * interrupted setup resumes where it stopped — live now that the
- * draft survives a restart in MMKV.
- */
 export function OnboardingStack() {
   const step = useAppSelector(selectOnboardingStep);
 

@@ -95,8 +95,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  /** Nothing is painted here — it only reserves the icon's row so the labels
-   *  line up whether a tab is active or not. */
   iconWrap: {
     width: 64,
     height: 30,

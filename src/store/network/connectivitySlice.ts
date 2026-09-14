@@ -1,18 +1,11 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export type ConnectivityState = {
-  /** `isConnected` AND not known-unreachable — see networkService. */
   isOnline: boolean;
-  /** Null until the platform has decided; a captive portal reads false. */
   isInternetReachable: boolean | null;
-  /** Drives the sync engine: a transition to online is a reason to drain. */
   lastChangedAt: number | null;
 };
 
-/**
- * Optimistic by default. Assuming offline before NetInfo has answered would
- * flash the offline banner on every cold start.
- */
 export const initialConnectivityState: ConnectivityState = {
   isOnline: true,
   isInternetReachable: null,

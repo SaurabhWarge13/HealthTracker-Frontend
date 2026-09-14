@@ -37,28 +37,12 @@ import type { EditableProfileField, MainTabScreenProps } from '@/types/navigatio
 type DeltaRow = { checkIn: CheckIn; deltaKg: number | null };
 
 type DayGroup = {
-  /** `dayKey` — also the FlatList key. */
   key: string;
-  /** The day's newest timestamp, formatted at render. */
   at: number;
   rows: DeltaRow[];
-  /**
-   * Set only on the first group of a month *after* the first, so a separator
-   * marks the change. The topmost group is left null: its day label already
-   * names the month, so a heading above it would only repeat itself.
-   */
   monthLabel: string | null;
 };
 
-/**
- * `rows` arrives newest-first from `selectCheckInsWithDelta`, and both `Map`
- * and the output array preserve insertion order — so days come out
- * newest-first and rows within a day newest-first, with no sort.
- *
- * Note the deltas are already computed against the previous check-in
- * *overall*, so the first row of a day correctly compares against the last
- * row of the day before. Re-deriving them per group would silently break that.
- */
 function groupByDay(rows: readonly DeltaRow[]): DayGroup[] {
   const groups: DayGroup[] = [];
   const byKey = new Map<string, DayGroup>();
@@ -143,8 +127,6 @@ export function CheckInHistoryScreen({
   );
 
   if (loading) {
-    // `padded`, not `'horizontal'`: with no header the top gap has to come
-    // from the screen itself.
     return (
       <AppScreen scroll padded contentStyle={styles.content}>
         <HistorySkeleton rows={2} />
@@ -185,24 +167,12 @@ export function CheckInHistoryScreen({
         }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        /**
-         * A day group is ~90dp against a ~780dp viewport, so ten items is
-         * about one screenful — accurate now that items are days, not months.
-         */
         initialNumToRender={10}
       />
     </AppScreen>
   );
 }
 
-/**
- * The legend, plus an invitation when a goal is missing.
- *
- * Naming the two glyphs once here is what lets every row drop its labels. The
- * goal prompt lives up here rather than in the rows for the same reason it is
- * phrased as an invitation: without a goal no row has a verdict to show, so
- * none of them should imply one.
- */
 function ListIntro({
   sleepGoalMinutes,
   waterGoalMl,
@@ -265,7 +235,6 @@ function ListIntro({
   );
 }
 
-/** A day's rows, on one rounded surface. No header — the date sits above it. */
 function DaySheet({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
   return (
@@ -275,7 +244,6 @@ function DaySheet({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Keeps month context once day grouping has taken it out of the headings. */
 function MonthRule({ label }: { label: string }) {
   const { colors } = useTheme();
   return (
@@ -289,7 +257,6 @@ function MonthRule({ label }: { label: string }) {
   );
 }
 
-/** Artboard 5b centres the empty state on its own card. */
 function EmptyCard({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
   return (
@@ -301,7 +268,6 @@ function EmptyCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Mirrors the real shape: a short day label above a sheet of rows. */
 function HistorySkeleton({ rows = 1 }: { rows?: number }) {
   const { colors } = useTheme();
   return (
@@ -328,10 +294,8 @@ function HistorySkeleton({ rows = 1 }: { rows?: number }) {
 }
 
 const styles = StyleSheet.create({
-  // Only the gap: AppScreen's own insets set the padding on a scroll screen.
   content: { gap: layout.screenPadding },
   listContent: {
-    // The list is the top of the screen now that the header is gone.
     paddingTop: layout.screenPadding,
     paddingBottom: layout.screenPadding,
     gap: layout.screenPadding,

@@ -10,7 +10,6 @@ export type IconTileTone = 'user' | 'device' | 'neutral';
 export type IconTileProps = {
   icon: LucideIcon;
   tone?: IconTileTone;
-  /** 34 in card headers (default); 44 in dialogs. */
   size?: 34 | 44;
   iconSize?: AppIconSize;
   style?: StyleProp<ViewStyle>;

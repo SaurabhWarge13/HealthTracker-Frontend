@@ -5,7 +5,6 @@ import { useTheme } from '@/hooks/useTheme';
 export type AppSwitchProps = {
   value: boolean;
   onValueChange: (next: boolean) => void;
-  /** Required: the row's label is not read out with the switch. */
   accessibilityLabel: string;
   disabled?: boolean;
 };

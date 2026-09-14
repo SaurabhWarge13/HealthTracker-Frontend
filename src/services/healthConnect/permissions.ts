@@ -1,7 +1,6 @@
 import type { Permission } from 'react-native-health-connect';
 import type { HealthConnectField } from '@/store/healthConnect/healthConnectSlice';
 
-/** Only the record types we touch — not the library's full union. */
 export type TrackedRecordType =
   | 'Weight'
   | 'Height'
@@ -38,11 +37,6 @@ export const READ_PERMISSIONS: Permission[] = HEALTH_CONNECT_FIELDS.map(field =>
   recordType: RECORD_TYPE_BY_FIELD[field],
 }));
 
-/**
- * Health Connect answers with the permissions it actually granted, which may
- * include record types we never asked about. Anything unrecognised is dropped
- * rather than guessed at.
- */
 export function fieldsFromPermissions(
   permissions: ReadonlyArray<{ accessType: string; recordType: string }>,
 ): HealthConnectField[] {

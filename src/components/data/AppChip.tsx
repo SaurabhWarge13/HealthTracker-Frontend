@@ -6,17 +6,11 @@ import { useTheme } from '@/hooks/useTheme';
 import { radius, type ColorName, type TextVariant } from '@/theme';
 
 export type AppChipVariant =
-  /** Health Connect / device data. */
   | 'device'
-  /** The user's own data. */
   | 'user'
-  /** Improving, downward deltas. */
   | 'positive'
-  /** Holding steady. */
   | 'steady'
-  /** No data, not connected, "None yet". */
   | 'neutral'
-  /** Outlined, hint text — "Optional". */
   | 'outlined';
 
 export type AppChipSize = 'sm' | 'md' | 'lg';

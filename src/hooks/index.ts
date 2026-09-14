@@ -4,6 +4,7 @@ export { useConnectivity } from './useConnectivity';
 export { useDeepLinks } from './useDeepLinks';
 export { useHealthConnect } from './useHealthConnect';
 export { useHealthConnectResume } from './useHealthConnectResume';
+export { useKeyboardSafeNav } from './useKeyboardSafeNav';
 export { useKeyboardVisible } from './useKeyboardVisible';
 export { useNotificationSchedule } from './useNotificationSchedule';
 export { useProfileDiscard } from './useProfileDiscard';

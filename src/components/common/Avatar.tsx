@@ -5,9 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { radius, type ColorName, type TextVariant } from '@/theme';
 
 export type AvatarProps = {
-  /** Full name or email; only the first letter is shown. */
   name: string;
-  /** 44 on the dashboard band, 64 in Settings. */
   size?: 44 | 64;
   background?: ColorName;
   style?: StyleProp<ViewStyle>;

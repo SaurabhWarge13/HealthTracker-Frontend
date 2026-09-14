@@ -79,7 +79,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
     openProviderInstall,
   } = useHealthConnect();
 
-  // Resolves the real store state into one view model.
   const view = useDashboardState({ bmi, entryCount });
 
   const openNewCheckIn = useCallback(
@@ -90,12 +89,10 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
     (id: string) => navigation.navigate('CheckInDetail', { id }),
     [navigation],
   );
-  /** The invite goes straight to the field it invites. */
   const openHeightSheet = useCallback(
     () => navigation.navigate('EditProfileField', { field: 'height' }),
     [navigation],
   );
-  /** "Set a goal" goes straight to the field it names. */
   const openGoal = useCallback(
     (field: 'sleepGoal' | 'waterGoal') =>
       navigation.navigate('EditProfileField', { field }),
@@ -105,22 +102,12 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
     () => navigation.navigate('Tabs', { screen: 'Settings' }),
     [navigation],
   );
-  /** Prompts for the permissions we do not have yet, then reads. */
   const requestHealthConnect = useCallback(() => {
     connect();
   }, [connect]);
-  /**
-   * Manage leaves the app: permissions are granted and revoked in Health
-   * Connect itself, and the resume listener picks up whatever changed.
-   */
   const manageHealthConnect = useCallback(() => {
     openHealthConnectSettings();
   }, [openHealthConnectSettings]);
-  /**
-   * The provider itself is unusable. A missing or stale one is resolved in the
-   * Play Store; one that is switched off is part of the OS already, so the
-   * store has nothing to offer and system settings is the only way back.
-   */
   const resolveProviderIssue = useCallback(() => {
     if (view.today.providerIssue === 'disabled') {
       openHealthConnectSettings();
@@ -149,7 +136,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
       />,
     ];
 
-    // No height is an invitation, not a dead dash.
     tiles.push(
       view.showBmi && bmi !== null ? (
         <StatTile key="bmi" label="BMI" value={formatBmi(bmi)} />
@@ -180,7 +166,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
       }
       contentStyle={styles.content}
     >
-      {/* Offline is a fact about the network, never framed as data loss. */}
       {view.isOffline ? (
         <InlineBanner
           icon={CloudOff}
@@ -189,11 +174,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         />
       ) : null}
 
-      {/*
-        The refresh failed, so what is on screen is the last good copy rather
-        than the current one. Says so without implying anything is lost — the
-        check-ins are all still here — and offers the one action that helps.
-      */}
       {view.pullFailed ? (
         <InlineBanner
           icon={CloudOff}
@@ -221,7 +201,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         />
       ) : null}
 
-      {/* Gave up on its own; only the user decides what happens next. */}
       {view.failedCount > 0 ? (
         <InlineBanner
           icon={TriangleAlert}
@@ -242,7 +221,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         />
       ) : null}
 
-      {/* ── Progress: check-ins and the baseline only ── */}
       <SectionCard
         icon={ChartNoAxesColumn}
         tone="user"
@@ -343,13 +321,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         )}
       </SectionCard>
 
-      {/*
-        ── Sleep and water: the user's own check-ins, never the device ──
-
-        Habits, not a journey — so this answers "how often did I hit it"
-        rather than "how far off am I", which is what the weight trend above
-        is for. Hidden until there is something to say.
-      */}
       {!view.loading && !view.isEmpty ? (
         <SectionCard
           icon={Target}
@@ -359,17 +330,11 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
             habits.sleep.bars.length === 1 ? 'check-in' : 'check-ins'
           }`}
         >
-          {/*
-            Two panels side by side rather than two stacked rows: each habit
-            gets its own space instead of sharing a line, and the divider
-            between them is no longer needed to tell them apart.
-          */}
           <View style={styles.habits}>
             <AttainmentRow
               attainment={habits.sleep}
               icon={Moon}
               label="Sleep"
-              // Short form: a round average should read "8h", not "8h 0m".
               format={formatDurationShort}
               onSetGoal={() => openGoal('sleepGoal')}
             />
@@ -384,7 +349,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         </SectionCard>
       ) : null}
 
-      {/* ── Today: Health Connect only. Hidden when the device has no HC. ── */}
       {view.showTodayCard ? (
         <SectionCard
           icon={Activity}
@@ -409,8 +373,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
           }
         >
           {view.today.providerIssue !== null ? (
-            /* Health Connect is unusable but fixable — this outranks the
-               permission ask, which cannot succeed until it is resolved. */
             <ProviderSetupPrompt
               issue={view.today.providerIssue}
               onAction={resolveProviderIssue}
@@ -478,7 +440,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         </SectionCard>
       ) : null}
 
-      {/* ── Recent check-ins ── */}
       {!view.isEmpty && recent.length > 0 ? (
         <SectionCard
           icon={ClipboardList}
@@ -512,7 +473,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
   );
 }
 
-/** Artboard 3h: the progress card loads while cached device data stays put. */
 function ProgressSkeleton() {
   return (
     <View>
@@ -534,7 +494,6 @@ function ProgressSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  /** `stretch` so both panels match the taller one's height. */
   habits: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
   content: { paddingBottom: layout.screenPadding, gap: layout.screenPadding },
   weightRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },

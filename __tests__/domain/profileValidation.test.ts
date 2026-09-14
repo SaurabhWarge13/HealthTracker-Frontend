@@ -23,7 +23,6 @@ describe('heightField — required on the profile', () => {
     expect(heightField.parse('170')).toBe(170);
   });
 
-  /** The whole point of the change: blank is no longer a valid answer. */
   it.each([
     ['empty', ''],
     ['spaces only', '   '],
@@ -64,10 +63,6 @@ describe('baselineSchema — step 3 gates Continue on both fields', () => {
     });
   });
 
-  /**
-   * The exact case that used to pass. Continue is bound to `formState.isValid`,
-   * so this failing is what disables the button.
-   */
   it('rejects a valid weight with no height', () => {
     expect(baselineSchema.safeParse({ weight: '72.4', height: '' }).success).toBe(
       false,
@@ -106,9 +101,6 @@ describe('optionalHeightField — unchanged, for the check-in snapshot', () => {
 
 describe('goalOrNull — a goal of zero is not a goal', () => {
   it('turns blank and zero into null alike', () => {
-    // Both mean "do not measure me against anything", and both have to become
-    // null: the API types every goal as `.positive()`, so a literal 0 is a 400
-    // that pushProfile swallows, leaving the profile permanently unsynced.
     expect(goalOrNull(undefined)).toBeNull();
     expect(goalOrNull(0)).toBeNull();
   });

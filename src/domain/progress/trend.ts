@@ -3,7 +3,6 @@ import type { CheckIn } from '@/domain/checkins/types';
 export type TrendPoint = {
   timestamp: number;
   weightKg: number;
-  /** True only for the synthetic baseline point. */
   isBaseline: boolean;
 };
 
@@ -14,7 +13,6 @@ export type Trend = {
   targetKg: number | null;
 };
 
-/** `checkIns` newest-first, as the selectors provide. */
 export const buildTrend = (
   checkIns: readonly CheckIn[],
   baselineWeightKg: number | null,
@@ -30,7 +28,6 @@ export const buildTrend = (
   }));
 
   if (baselineWeightKg !== null) {
-    // Sit the baseline just before the first entry when its own date is unknown.
     const firstAt = points.length > 0 ? points[0].timestamp : Date.now();
     points.unshift({
       timestamp: baselineAt ?? firstAt - 1,
@@ -50,5 +47,4 @@ export const buildTrend = (
   };
 };
 
-/** A line needs two points; one is a dot that reads as a bug. */
 export const hasPlottableTrend = (trend: Trend): boolean => trend.points.length >= 2;

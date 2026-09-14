@@ -20,14 +20,6 @@ const SLEEP_RANGE_MESSAGE = `Enter sleep between 0 and ${
   SLEEP_MAX_MINUTES / 60
 } hours.`;
 
-/**
- * "7h 20m", "7h", "7:20" and "7.5" all mean roughly the same thing to a person
- * typing quickly, so accept them all and store minutes.
- *
- * A bare number is always hours, never minutes: reading large bare numbers as
- * minutes made "26" a silently-accepted 26-minute night instead of the range
- * error a person typing hours expects.
- */
 export const parseSleepInput = (value: string): number | null => {
   const trimmed = value.trim().toLowerCase();
   if (trimmed === '') {
@@ -81,7 +73,6 @@ export const checkInSchema = z.object({
       .max(SLEEP_MAX_MINUTES, SLEEP_RANGE_MESSAGE)
       .optional(),
   ),
-  /** Entered in litres, stored as integer millilitres. */
   water: optional(parseDecimalInput).pipe(
     z
       .number()
@@ -89,10 +80,6 @@ export const checkInSchema = z.object({
       .max(WATER_MAX_ML / 1000, `Enter an amount under ${WATER_MAX_ML / 1000} L.`)
       .optional(),
   ),
-  /**
-   * Optional here even though the profile now requires it: this is the height
-   * *at the time of the check-in*, and an older entry may not have one.
-   */
   height: optionalHeightField,
   notes: z.string().max(NOTES_MAX_LENGTH, 'That is a very long note.'),
 });

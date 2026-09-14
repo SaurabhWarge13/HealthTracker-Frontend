@@ -9,7 +9,6 @@ import { formatHeaderDate } from '@/utils/formatters';
 
 export type DashboardHeaderProps = {
   name: string;
-  /** Injected so the component stays pure and the date is testable. */
   now?: number;
   hasNotification?: boolean;
   onPressNotifications?: () => void;
@@ -71,7 +70,6 @@ export function DashboardHeader({
         ) : null}
       </View>
 
-      {/* The 4px strip that anchors the band to the page. */}
       <View style={[styles.strip, { backgroundColor: colors.userAccent }]} />
     </View>
   );

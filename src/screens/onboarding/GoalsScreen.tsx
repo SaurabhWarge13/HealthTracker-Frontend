@@ -6,6 +6,7 @@ import { Activity, Droplet, Moon, Target } from 'lucide-react-native';
 import { AppButton, AppText } from '@/components/common';
 import { SectionCard } from '@/components/layout';
 import { GoalInputRow, OnboardingStepLayout } from '@/components/onboarding';
+import { useKeyboardSafeNav } from '@/hooks';
 import {
   goalOrNull,
   goalsSchema,
@@ -23,7 +24,6 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { spacing } from '@/theme';
 import type { OnboardingScreenProps } from '@/types/navigation';
 
-/** GoalInputRow is presentational; this binds one to react-hook-form. */
 function ControlledGoalRow({
   control,
   name,
@@ -48,8 +48,8 @@ function ControlledGoalRow({
 export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
   const dispatch = useAppDispatch();
   const draft = useAppSelector(selectOnboardingDraft);
+  const safeNav = useKeyboardSafeNav();
 
-  // Three generics: the fields hold text, the handler gets parsed numbers.
   const { control, handleSubmit } = useForm<GoalsValues, unknown, GoalsPayload>({
     resolver: zodResolver(goalsSchema),
     mode: 'onTouched',
@@ -76,45 +76,28 @@ export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
       waterGoalMl: number | null;
       sleepGoalMinutes: number | null;
       targetWeightKg: number | null;
-    }) => {
-      dispatch(goalsSaved(goals));
+    }) =>
+      safeNav(() => {
+        dispatch(goalsSaved(goals));
 
-      const now = Date.now();
-      // Nothing is seeded any more. Check-ins come from `GET /checkins` once
-      // MainStack mounts, and Health Connect is read from the device on every
-      // foreground — a brand-new account correctly starts empty.
+        const now = Date.now();
 
-      // The only path to the dashboard: flipping `isComplete` re-renders
-      // RootNavigator onto MainStack — no navigate() call anywhere.
-      dispatch(
-        profileCompleted({
-          name: draft.name,
-          baselineWeightKg: draft.weightKg,
-          heightCm: draft.heightCm,
-          // The baseline is anchored to now, so it plots before the first
-          // check-in on the trend chart.
-          baselineSetAt: now,
-          ...goals,
-        }),
-      );
+        dispatch(
+          profileCompleted({
+            name: draft.name,
+            baselineWeightKg: draft.weightKg,
+            heightCm: draft.heightCm,
+            baselineSetAt: now,
+            ...goals,
+          }),
+        );
 
-      /**
-       * No network call here. `profileCompleted` marks the profile as needing
-       * a push, and the sync engine sends it once MainStack mounts — so
-       * finishing setup on a train works, and the profile reaches the server
-       * when the network does.
-       */
-    },
-    [dispatch, draft],
+      }),
+    [dispatch, draft, safeNav],
   );
 
   const onSubmit = useCallback(
     (values: GoalsPayload) => {
-      /**
-       * `goalOrNull` rather than `?? null`: a goal of zero is not a goal, and
-       * sending a literal 0 is rejected by the API's `.positive()` — which
-       * `pushProfile` swallows, leaving the profile permanently unsynced.
-       */
       const waterLitres = goalOrNull(values.waterGoalLitres);
       const sleepHours = goalOrNull(values.sleepGoalHours);
 
@@ -147,7 +130,7 @@ export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
       step={4}
       title="Anything you'd like to aim for?"
       subtitle="All three are optional, and easy to change later."
-      onBack={navigation.goBack}
+      onBack={() => safeNav(navigation.goBack)}
       footer={
         <View style={styles.actions}>
           <AppButton

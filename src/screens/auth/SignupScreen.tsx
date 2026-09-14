@@ -8,18 +8,19 @@ import { ControlledInput } from '@/components/forms';
 import { IconTile } from '@/components/layout';
 import { authMessage } from '@/domain/api/errors';
 import { signupSchema, type SignupValues } from '@/domain/auth/validation';
+import { useKeyboardSafeNav } from '@/hooks/useKeyboardSafeNav';
 import { useSignIn } from '@/hooks/useSignIn';
 import { useToast } from '@/hooks/useToast';
 import { spacing } from '@/theme';
 import type { AuthScreenProps } from '@/types/navigation';
 
-/** Server field names that have a matching input on this form. */
 const FORM_FIELDS = ['email', 'password'] as const;
 
 export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
   const { signUp, submitting } = useSignIn();
+  const safeNav = useKeyboardSafeNav();
   const showToast = useToast();
 
   const { control, handleSubmit, formState, setError } = useForm<SignupValues>({
@@ -37,15 +38,11 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
         password: parsed.password,
       });
       if (result.ok) {
-        // No account exists yet, so there is nothing to announce — VerifyOtp
-        // creates the user and carries the success message.
         Keyboard.dismiss();
         navigation.navigate('VerifyOtp', { email: parsed.email });
         return;
       }
 
-      // Also mark the email field, so the user can see which of four inputs
-      // to change. The toast below still carries the message.
       if (result.error.kind === 'emailTaken') {
         setError('email', { message: authMessage(result.error) });
       }
@@ -60,7 +57,6 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
         }
       }
 
-      // Same rule as Login: anything that took a round trip is a toast.
       showToast(authMessage(result.error), 'error');
     },
     [navigation, setError, showToast, signUp],
@@ -74,7 +70,6 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
       padded
       centerContent
       keyboardAvoiding
-      // A link, not an action: it belongs under the keyboard, not on top of it.
       footerPlacement="scroll"
       footer={
         <View style={styles.footer}>
@@ -85,7 +80,7 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
             label="Sign in"
             variant="text"
             size={48}
-            onPress={navigation.goBack}
+            onPress={() => safeNav(navigation.goBack)}
           />
         </View>
       }

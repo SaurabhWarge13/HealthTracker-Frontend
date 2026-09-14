@@ -39,9 +39,6 @@ describe('mergePendingOp — one op per check-in, whatever the user did', () => 
   });
 
   it('keeps the delete when the create was already attempted', () => {
-    // The server may hold the row even though this device saw a failure — a
-    // dropped response looks exactly like a dropped request. Cancelling the
-    // pair would strand it there, to reappear on the next refetch.
     const attempted = { ...op('create', 'a', checkIn('a')), attempts: 1 };
     const merged = mergePendingOp(attempted, op('delete', 'a'));
 
@@ -50,8 +47,6 @@ describe('mergePendingOp — one op per check-in, whatever the user did', () => 
   });
 
   it('carries the OLDEST before through a burst of edits', () => {
-    // Abandoning four offline edits has to go back to what the server holds,
-    // not to the state after the third one — which it never saw.
     const serverState = checkIn('a', 72);
     const first = { ...op('update', 'a', checkIn('a', 71)), before: serverState };
     const second = { ...op('update', 'a', checkIn('a', 70)), before: checkIn('a', 71) };
@@ -60,8 +55,6 @@ describe('mergePendingOp — one op per check-in, whatever the user did', () => 
   });
 
   it('cancels a create that was deleted before it was sent', () => {
-    // The server never heard of it; sending a create then a delete would be
-    // busywork, and leaves a row behind if the delete fails.
     const merged = mergePendingOp(op('create', 'a', checkIn('a')), op('delete', 'a'));
     expect(merged).toBeNull();
   });
@@ -217,8 +210,6 @@ describe('reconcileCheckIns — the function that makes a refetch safe', () => {
   });
 
   it('does not duplicate a synced check-in under both its ids', () => {
-    // Created offline as local_1, accepted by the server as srv_9. Without the
-    // mapping the same entry would appear twice.
     const result = reconcileCheckIns({
       server: [checkIn('srv_9', 70)],
       ops: [],

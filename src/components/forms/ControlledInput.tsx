@@ -15,10 +15,6 @@ export type ControlledInputProps<
   control: Control<TValues, unknown, TTransformed>;
   name: FieldPath<TValues>;
   inputRef?: React.Ref<TextInput>;
-  /**
-   * Fires alongside the form update. The check-in form uses it to notice the
-   * first edit of a field, which is what flips its source chip to "Manual".
-   */
   onValueChange?: (text: string) => void;
 };
 

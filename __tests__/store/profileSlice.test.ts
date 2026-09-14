@@ -20,7 +20,6 @@ import {
   stepEntered,
 } from '@/store/onboarding/onboardingSlice';
 
-/** What `GET /profile` would give us, in domain shape. */
 const SERVER_PROFILE = {
   name: 'Server Name',
   baselineWeightKg: 70,
@@ -51,14 +50,10 @@ describe('profileCompleted', () => {
   it('opens the dashboard and queues the profile for the server', () => {
     const state = profileReducer(initialProfileState, completed);
     expect(state.isComplete).toBe(true);
-    // Onboarding must not depend on a network (§3.4), so it is written
-    // locally and pushed later.
     expect(state.pendingSync).toBe(true);
   });
 
   it('clears the onboarding draft it was copied from', () => {
-    // The draft is scratch space. Leaving it behind puts a second, stale copy
-    // of the name, weight, height and goals on disk, shadowing the real one.
     const draft = [
       nameSaved('Demo'),
       baselineSaved({ weightKg: 76.5, heightCm: 175 }),
@@ -102,8 +97,6 @@ describe('profileEdited', () => {
   });
 
   it('ignores undefined rather than blanking a real value', () => {
-    // The server's PUT is a full replace, so a half-formed profile here
-    // becomes a half-erased profile there.
     const state = reduce(
       initialProfileState,
       completed,
@@ -113,8 +106,6 @@ describe('profileEdited', () => {
   });
 
   it('leaves the baseline date alone when the weight is corrected', () => {
-    // Fixing a typo is not re-baselining; the chart's first point stays where
-    // the user actually started.
     const state = reduce(
       initialProfileState,
       completed,
@@ -143,8 +134,6 @@ describe('profileHydrated', () => {
   });
 
   it('never overwrites a local edit that has not been pushed', () => {
-    // Otherwise a change made offline would visibly revert the next time the
-    // app talked to the server.
     const state = reduce(
       initialProfileState,
       completed,
@@ -176,12 +165,6 @@ describe('profileSynced / profileReset', () => {
   });
 });
 
-/**
- * The profile has a dirty flag instead of an outbox, which is right — the
- * server's PUT is a full replace, so five pending edits and one are the same
- * request. What it lacked was a way to *stop*: a rejected payload was retried
- * on every mount, foreground and reconnect, forever, with nothing on screen.
- */
 describe('profile sync lifecycle', () => {
   const dirty = (): ProfileState =>
     profileReducer(initialProfileState, profileEdited({ name: 'Ada' }));
@@ -202,11 +185,9 @@ describe('profile sync lifecycle', () => {
 
   it('keeps a permanent failure pending AND flagged', () => {
     const state = profileReducer(dirty(), profileSyncFailed('Some details need fixing.'));
-    // Still unsynced work — this is what logout has to warn about.
     expect(state.pendingSync).toBe(true);
     expect(state.syncFailed).toBe(true);
     expect(state.lastError).toBe('Some details need fixing.');
-    // And the edit itself is untouched.
     expect(state.name).toBe('Ada');
   });
 
@@ -216,7 +197,6 @@ describe('profile sync lifecycle', () => {
 
     expect(retried.syncFailed).toBe(false);
     expect(retried.lastError).toBeNull();
-    // Still pending, so the engine picks it up again.
     expect(retried.pendingSync).toBe(true);
     expect(retried.name).toBe('Ada');
   });
@@ -229,27 +209,18 @@ describe('profile sync lifecycle', () => {
     expect(edited.pendingSync).toBe(true);
   });
 
-  /**
-   * Discard has to leave the local profile equal to the server's version.
-   * Clearing the flags alone would strand the rejected value on screen,
-   * indistinguishable from an accepted one — so the caller hydrates straight
-   * after, and the order below is what makes that land.
-   */
   it('lets the server copy through once the flags are cleared', () => {
     const failed = profileReducer(dirty(), profileSyncFailed('nope'));
     expect(failed.name).toBe('Ada');
 
-    // Hydration alone is refused while the edit is still pending...
     const blocked = profileReducer(failed, profileHydrated(SERVER_PROFILE));
     expect(blocked.name).toBe('Ada');
 
-    // ...so discard drops the flags first, then the server copy applies.
     const discarded = profileReducer(failed, profileDiscarded());
     expect(discarded.pendingSync).toBe(false);
     expect(discarded.syncFailed).toBe(false);
 
     const restored = profileReducer(discarded, profileHydrated(SERVER_PROFILE));
-    // The rejected value is gone, which is the whole point of Discard.
     expect(restored.name).toBe('Server Name');
     expect(restored.baselineWeightKg).toBe(70);
     expect(restored.pendingSync).toBe(false);
@@ -257,11 +228,6 @@ describe('profile sync lifecycle', () => {
   });
 });
 
-/**
- * The logout guard counts unsynced work. A permanently failed profile edit is
- * unsynced work — reading only `pendingSync` would let it be discarded with
- * no warning at all.
- */
 describe('unsynced-work accounting', () => {
   const unsyncedCount = (p: ProfileState, ops = 0, failedOps = 0) =>
     ops + failedOps + (p.pendingSync || p.syncFailed ? 1 : 0);
@@ -281,8 +247,6 @@ describe('unsynced-work accounting', () => {
       profileSyncFailed('nope'),
     );
     expect(unsyncedCount(p)).toBe(1);
-    // Even if the pending flag were ever cleared independently, the failure
-    // alone must still block a silent logout.
     expect(unsyncedCount({ ...p, pendingSync: false })).toBe(1);
   });
 });

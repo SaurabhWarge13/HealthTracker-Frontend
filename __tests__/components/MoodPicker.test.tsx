@@ -1,10 +1,3 @@
-/**
- * `render` is async in @testing-library/react-native 14 — see the note in
- * CreateToast.test.tsx.
- *
- * The faces are sized from a measured width, and `onLayout` never fires on its
- * own in tests, so every case has to hand the picker a width first.
- */
 import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { MoodPicker } from '@/components/checkins/MoodPicker';
@@ -14,7 +7,6 @@ import type { Mood } from '@/domain/checkins/types';
 
 const PICKER = 'mood-picker';
 
-/** Renders the picker and gives it a width, so the faces are laid out. */
 const renderPicker = async (
   value: Mood | null,
   onChange: (mood: Mood) => void = jest.fn(),
@@ -68,11 +60,6 @@ describe('MoodPicker', () => {
     expect(getByText(MOOD_LABELS[2])).toBeTruthy();
   });
 
-  /**
-   * The bug this rewrite exists to fix: a face that is not exactly square
-   * draws a stadium rather than a circle, whatever the radius. Selection may
-   * change colour, never geometry.
-   */
   it('keeps every face square, selected or not, with a radius of half its side', async () => {
     const { getAllByRole } = await renderPicker(3);
     for (const face of getAllByRole('radio')) {
@@ -85,7 +72,6 @@ describe('MoodPicker', () => {
   it('shrinks the faces so all five fit a narrow screen', async () => {
     const { getAllByRole } = await renderPicker(null, jest.fn(), 260);
     const style = StyleSheetFlatten(getAllByRole('radio')[0].props.style);
-    // Five faces plus four 8pt gaps must not exceed the measured width.
     expect(style.width * 5 + 8 * 4).toBeLessThanOrEqual(260);
   });
 
@@ -96,6 +82,5 @@ describe('MoodPicker', () => {
   });
 });
 
-/** Local flatten — the style prop is an array of objects. */
 const StyleSheetFlatten = (style: unknown): Record<string, number> =>
   Object.assign({}, ...(Array.isArray(style) ? style.flat(Infinity) : [style]));

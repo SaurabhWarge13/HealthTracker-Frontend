@@ -4,17 +4,11 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { AppChip, type AppChipSize, type AppChipVariant } from './AppChip';
 
 export type DataSource =
-  /** Prefilled from Health Connect and untouched. */
   | 'healthConnect'
-  /** The user typed or edited this value. */
   | 'manual'
-  /** Tracked continuously by the device (onboarding explainer). */
   | 'automatic'
-  /** Permission granted (settings list). */
   | 'connected'
-  /** Permission missing (settings list). */
   | 'notConnected'
-  /** Field the user may leave blank. */
   | 'optional';
 
 type SourcePreset = {
@@ -35,7 +29,6 @@ const PRESET: Record<DataSource, SourcePreset> = {
 export type SourceChipProps = {
   source: DataSource;
   size?: AppChipSize;
-  /** Override the preset label (e.g. "3 data types"). */
   label?: string;
   style?: StyleProp<ViewStyle>;
 };

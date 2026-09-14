@@ -10,7 +10,6 @@ export type DataTypeStatusRowProps = {
   label: string;
   status: DataSource;
   icon?: LucideIcon;
-  /** Dim the label when the data type is off (Settings "Water"). */
   muted?: boolean;
   chipSize?: AppChipSize;
 };

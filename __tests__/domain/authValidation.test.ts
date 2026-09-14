@@ -56,7 +56,6 @@ describe('loginSchema', () => {
 describe('otpSchema', () => {
   it('accepts exactly four digits', () => {
     expect(otpSchema.safeParse({ code: '1234' }).success).toBe(true);
-    // Leading zeros are digits like any other — the code is a string, not a number.
     expect(otpSchema.safeParse({ code: '0000' }).success).toBe(true);
   });
 

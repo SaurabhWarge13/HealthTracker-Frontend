@@ -1,10 +1,3 @@
-/**
- * App shell: gesture root → Redux → safe area → theme → navigation.
- * MMKV hydration happens in `store/store.ts`, before the first render.
- *
- * @format
- */
-
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';

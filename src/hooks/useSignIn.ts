@@ -29,8 +29,6 @@ export function useSignIn() {
   const [fetchProfile] = useLazyGetProfileQuery();
   const [submitting, setSubmitting] = useState(false);
 
-  // A 404 is an answer, not a failure: no profile yet means onboarding is
-  // correct. Any other failure leaves what is on the device alone.
   const hydrateProfile = useCallback(async (): Promise<void> => {
     try {
       const profile = await fetchProfile().unwrap();
@@ -42,19 +40,10 @@ export function useSignIn() {
     }
   }, [dispatch, fetchProfile]);
 
-  /**
-   * Turns a token pair into a live session. The ordering is deliberate — see
-   * docs/AUTH_FLOW.md §4. Reached from both signing in and verifying a code.
-   */
   const establishSession = useCallback(
     async (auth: AuthResponseDto): Promise<void> => {
-      // Best effort: a device whose keystore is unavailable still gets a
-      // working session, it just will not survive a restart.
       await saveRefreshToken(auth.refreshToken);
 
-      // A different account must not inherit the last one's data — least of
-      // all its outbox, which would post one user's check-ins into another's.
-      // An expired session keeps everything; a different user starts clean.
       if (previousUserId !== null && previousUserId !== auth.user.id) {
         dispatch(checkInsCleared());
         dispatch(profileReset());
@@ -62,7 +51,6 @@ export function useSignIn() {
         dispatch(syncCleared());
       }
 
-      // Token in place, session not yet started: the calling screen stays up.
       dispatch(tokensRefreshed({ accessToken: auth.accessToken }));
 
       await hydrateProfile();
@@ -78,10 +66,6 @@ export function useSignIn() {
     [dispatch, hydrateProfile, previousUserId],
   );
 
-  /**
-   * The shared shell every auth action runs inside: one `submitting` flag and
-   * a Result rather than a throw, so every screen handles failure the same way.
-   */
   const attempt = useCallback(
     async (action: () => Promise<void>): Promise<SignInResult> => {
       setSubmitting(true);
@@ -105,8 +89,6 @@ export function useSignIn() {
     [attempt, establishSession, login],
   );
 
-  // Starts no session: signup creates no account, so `establishSession` runs
-  // in VerifyOtp instead.
   const signUp = useCallback(
     (credentials: Credentials) =>
       attempt(async () => {

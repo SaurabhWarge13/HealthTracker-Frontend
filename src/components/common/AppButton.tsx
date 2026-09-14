@@ -20,7 +20,6 @@ export type AppButtonVariant =
   | 'deviceTint'
   | 'text';
 
-/** Only meaningful for `variant="text"`. */
 export type AppButtonTone = 'user' | 'device' | 'danger' | 'muted';
 
 export type AppButtonSize = 56 | 52 | 48 | 32;
@@ -99,12 +98,6 @@ export function AppButton({
   const inactive = disabled || loading;
   const isText = variant === 'text';
 
-  /**
-   * A text button gets no fill, pressed or not. Its box is only 4pt wider than
-   * the label but as tall as the tap target, so a tint reads as a slab clamped
-   * around the words rather than a highlight — wrong for something that sits
-   * inline in a sentence. The label dims instead (`styles.textPressed`).
-   */
   const fill: Fill = isText
     ? { background: null, backgroundPressed: null, foreground: TEXT_TONE[tone] }
     : VARIANT[variant];
@@ -121,7 +114,6 @@ export function AppButton({
     return fill.background !== null ? colors[fill.background] : undefined;
   };
 
-  // Small (32) buttons use the 12/600 chip-ish label; everything else 15/600.
   const labelVariant = size === 32 ? 'captionStrong' : 'bodyStrong';
 
   return (
@@ -132,14 +124,7 @@ export function AppButton({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: inactive, busy: loading }}
       testID={testID}
-      // Short buttons still need a 48pt touch target.
       hitSlop={Math.max(0, (layout.minTapTarget - size) / 2)}
-      /**
-       * No `android_ripple` on purpose. RN masks a bounded ripple with a plain
-       * rectangle (ReactDrawableHelper.getMask), so on a pill it paints square
-       * corners for the length of the press. The feedback is the pressed fill
-       * below (or a dimmed label for `text`), and it matches iOS.
-       */
       style={({ pressed }) => [
         styles.base,
         {
@@ -176,7 +161,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: radius.pill,
   },
-  /** The whole press state for `text`: no shape appears, the label fades. */
   textPressed: { opacity: 0.6 },
   fullWidth: { alignSelf: 'stretch' },
   hugContent: { alignSelf: 'flex-start' },

@@ -7,7 +7,6 @@ export * from './radius';
 
 export type ColorScheme = 'light' | 'dark';
 
-/** What `useTheme()` returns. */
 export type Theme = {
   colors: ThemeColors;
   scheme: ColorScheme;

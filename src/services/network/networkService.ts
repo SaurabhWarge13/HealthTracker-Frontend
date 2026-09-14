@@ -13,10 +13,6 @@ export function toConnectivity(state: NetInfoState): Connectivity {
   };
 }
 
-/**
- * NetInfo emits the current state on subscribe, so there is no separate
- * one-shot read: subscribing is how the app learns where it stands.
- */
 export function subscribeToConnectivity(
   onChange: (value: Connectivity) => void,
 ): () => void {

@@ -9,7 +9,6 @@ export type SkeletonProps = {
   width?: number | `${number}%`;
   height?: number;
   shape?: SkeletonShape;
-  /** The design uses two tones so blocks read as distinct. */
   tone?: Extract<ColorName, 'skeleton' | 'skeletonStrong'>;
   style?: StyleProp<ViewStyle>;
 };

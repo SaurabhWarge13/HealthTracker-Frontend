@@ -9,39 +9,21 @@ import type { RootState } from '@/store/rootReducer';
 const selectById = (state: RootState) => state.checkins.byId;
 const selectAllIds = (state: RootState) => state.checkins.allIds;
 
-/**
- * What the skeleton keys on, rather than `loading`.
- *
- * `loading` is only true while a request is on the wire, and a screen paints
- * before its effects run. In that gap an account with no data looks identical
- * to one whose data has not been asked for yet, so the empty state would
- * appear, get replaced by a skeleton, then reappear.
- */
 export const selectCheckInsUnsettled = (state: RootState): boolean => {
   const { loading, fetchedAt, lastAttemptAt, allIds } = state.checkins;
 
   if (loading) {
     return true;
   }
-  // Anything on the device is worth showing immediately; a refresh behind it
-  // is silent.
   if (allIds.length > 0) {
     return false;
   }
-  // We have looked at least once. Empty means empty.
   if (fetchedAt !== null || lastAttemptAt !== null) {
     return false;
   }
-  // Never looked. Offline, that is the final answer; online, a request is
-  // moments away and worth waiting for.
   return state.connectivity.isOnline;
 };
 
-/**
- * Newest first. Pending sync state is surfaced separately through
- * `selectPendingEntityIds`, so a row can show its waiting-to-sync clock
- * without this having to fold in the outbox.
- */
 export const selectCheckIns = createSelector(
   [selectById, selectAllIds],
   (byId, allIds): CheckIn[] =>
@@ -63,14 +45,12 @@ export const selectRecentCheckIns = createSelector(selectCheckIns, entries =>
 export const selectCheckInById = (id: string) =>
   createSelector(selectCheckIns, entries => entries.find(e => e.id === id) ?? null);
 
-/** The entry saved immediately before this one, for its delta badge. */
 export const selectPreviousCheckIn = (id: string) =>
   createSelector(selectCheckIns, entries => {
     const index = entries.findIndex(e => e.id === id);
     return index === -1 ? null : entries[index + 1] ?? null;
   });
 
-/** Newest entry, used to prefill the next check-in's weight. */
 export const selectLatestCheckIn = createSelector(
   selectCheckIns,
   entries => entries[0] ?? null,
@@ -99,12 +79,6 @@ export const selectTrend = createSelector(
 const selectSleepGoal = (state: RootState) => state.profile.sleepGoalMinutes;
 const selectWaterGoal = (state: RootState) => state.profile.waterGoalMl;
 
-/**
- * Reads check-ins and the two goals, and nothing else — in particular not
- * `state.healthConnect`. A saved check-in's numbers are the user's from the
- * moment they saved them, so if this read the device instead, revoking a
- * Health Connect permission would appear to erase history the user still has.
- */
 export const selectSleepAndWater = createSelector(
   [selectCheckIns, selectSleepGoal, selectWaterGoal],
   (entries, sleepGoal, waterGoal) => ({
@@ -113,7 +87,6 @@ export const selectSleepAndWater = createSelector(
   }),
 );
 
-/** Each entry paired with its change from the previous one. */
 export const selectCheckInsWithDelta = createSelector(selectCheckIns, entries =>
   entries.map((entry, index) => ({
     checkIn: entry,

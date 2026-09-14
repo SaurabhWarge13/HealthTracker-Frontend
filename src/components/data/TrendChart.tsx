@@ -17,14 +17,11 @@ const PAD_Y = 12;
 
 export function TrendChart({ trend, height = 78 }: TrendChartProps) {
   const { colors } = useTheme();
-  // Width comes from layout rather than a fixed viewBox, so the line stays
-  // true on every screen size instead of being stretched.
   const [width, setWidth] = useState(0);
 
   const { points, minKg, maxKg, targetKg } = trend;
   const ready = width > 0 && points.length >= 2;
 
-  // A flat series would divide by zero; give it a nominal band instead.
   const span = maxKg - minKg || 1;
   const innerW = Math.max(1, width - PAD_X * 2);
   const innerH = Math.max(1, height - PAD_Y * 2);
@@ -67,7 +64,6 @@ export function TrendChart({ trend, height = 78 }: TrendChartProps) {
 
             {points.map((point, index) => {
               const last = index === points.length - 1;
-              // The baseline reads as an anchor, not a check-in, so it is hollow.
               if (point.isBaseline) {
                 return (
                   <Circle

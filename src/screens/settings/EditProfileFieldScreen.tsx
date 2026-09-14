@@ -7,6 +7,7 @@ import { X } from 'lucide-react-native';
 import { AppButton, AppScreen, AppText } from '@/components/common';
 import { MeasurementField } from '@/components/checkins';
 import { ScreenHeader, StickyFooter } from '@/components/layout';
+import { useKeyboardSafeNav } from '@/hooks';
 import {
   goalOrNull,
   heightField,
@@ -33,13 +34,9 @@ type FieldConfig = {
   placeholder: string;
   keyboardType: KeyboardTypeOptions;
   optional: boolean;
-  /** Zod for the single `value` input: text in, parsed number out. */
   schema: z.ZodType<number | undefined, string>;
-  /** Current value as the text the field should open with. */
   read: (profile: ProfileState) => string;
-  /** Parsed value back into a profile patch. */
   write: (value: number | undefined) => Partial<ProfileState>;
-  /** Why this number matters, in the app's voice. */
   helper?: string;
 };
 
@@ -56,8 +53,6 @@ const CONFIG: Record<EditableProfileField, FieldConfig> = {
     schema: weightField,
     read: profile => text(profile.baselineWeightKg),
     write: value => ({ baselineWeightKg: value ?? null }),
-    // Every "since you started" figure is measured from this, so changing it
-    // moves them all. Better said out loud than discovered on the dashboard.
     helper: 'Every change is measured from here, so your progress will recalculate.',
   },
   height: {
@@ -66,7 +61,6 @@ const CONFIG: Record<EditableProfileField, FieldConfig> = {
     suffix: 'cm',
     placeholder: '175',
     keyboardType: 'number-pad',
-    // Onboarding requires it, so it can be changed here but not blanked out.
     optional: false,
     schema: heightField,
     read: profile => text(profile.heightCm),
@@ -93,7 +87,6 @@ const CONFIG: Record<EditableProfileField, FieldConfig> = {
     keyboardType: 'decimal-pad',
     optional: true,
     schema: optionalWaterGoalLitresField,
-    // Entered in litres, stored in millilitres.
     read: profile =>
       profile.waterGoalMl === null ? '' : String(mlToLitres(profile.waterGoalMl)),
     write: value => {
@@ -109,7 +102,6 @@ const CONFIG: Record<EditableProfileField, FieldConfig> = {
     keyboardType: 'decimal-pad',
     optional: true,
     schema: optionalSleepGoalHoursField,
-    // Entered in hours, stored in minutes so it matches a check-in.
     read: profile =>
       profile.sleepGoalMinutes === null
         ? ''
@@ -130,7 +122,6 @@ const CONFIG: Record<EditableProfileField, FieldConfig> = {
     schema: optionalTargetWeightField,
     read: profile => text(profile.targetWeightKg),
     write: value => ({ targetWeightKg: value ?? null }),
-    // Nothing in this app assumes down is good.
     helper: 'A target can sit above or below where you are now.',
   },
 };
@@ -145,6 +136,7 @@ export function EditProfileFieldScreen({
   const dispatch = useAppDispatch();
   const profile = useAppSelector(selectProfile);
   const config = CONFIG[route.params.field];
+  const safeNav = useKeyboardSafeNav();
 
   const { control, handleSubmit, formState } = useForm<
     EditValues,
@@ -157,11 +149,12 @@ export function EditProfileFieldScreen({
   });
 
   const onSubmit = useCallback(
-    (values: EditPayload) => {
-      dispatch(profileEdited(config.write(values.value)));
-      navigation.goBack();
-    },
-    [config, dispatch, navigation],
+    (values: EditPayload) =>
+      safeNav(() => {
+        dispatch(profileEdited(config.write(values.value)));
+        navigation.goBack();
+      }),
+    [config, dispatch, navigation, safeNav],
   );
 
   const submit = handleSubmit(onSubmit);
@@ -177,7 +170,7 @@ export function EditProfileFieldScreen({
           title={config.title}
           backIcon={X}
           backAccessibilityLabel="Close"
-          onBack={navigation.goBack}
+          onBack={() => safeNav(navigation.goBack)}
         />
       }
       footer={

@@ -16,18 +16,6 @@ export function useSync(): void {
   const pendingCount = useAppSelector(selectPendingCount);
   const nextAttemptAt = useAppSelector(selectNextAttemptAt);
 
-  /**
-   * The engine is not a hook and holds its own single-flight guard, so firing
-   * it more often than necessary is harmless — which is what makes these
-   * triggers safe to overlap.
-   *
-   * Mount, and coming back online: revive, then push then pull.
-   *
-   * The revive comes first because being online is new information about every
-   * op that gave up on a bad connection. Without it, a two-minute outage costs
-   * the user a trip to Settings to press Retry on something that would now
-   * succeed on its own.
-   */
   useEffect(() => {
     if (!hasSession || !isOnline) {
       return;
@@ -36,11 +24,6 @@ export function useSync(): void {
     runSync(store);
   }, [dispatch, hasSession, isOnline]);
 
-  /**
-   * A new op: push only. Pulling here as well would refetch the whole list
-   * every time the queue drains, since draining is itself what changes the
-   * count — one wasted request per saved check-in.
-   */
   useEffect(() => {
     if (!hasSession || !isOnline || pendingCount === 0) {
       return;
@@ -48,7 +31,6 @@ export function useSync(): void {
     drainSyncQueue(store);
   }, [hasSession, isOnline, pendingCount]);
 
-  // Foreground.
   const previousState = useRef<AppStateStatus>(AppState.currentState);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', next => {
@@ -61,7 +43,6 @@ export function useSync(): void {
     return () => subscription.remove();
   }, []);
 
-  // Scheduled retry.
   useEffect(() => {
     if (nextAttemptAt === null || !isOnline || !hasSession) {
       return;

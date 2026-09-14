@@ -4,7 +4,6 @@ import {
   SLEEP_MAX_MINUTES,
 } from '@/domain/checkins/validation';
 
-/** A check-in that is valid apart from whatever the test overrides. */
 const values = (overrides: Partial<Record<string, string>> = {}) => ({
   weight: '72.0',
   steps: '',
@@ -29,8 +28,6 @@ describe('parseSleepInput', () => {
   });
 
   it('treats a bare number as hours even when it is out of range', () => {
-    // The old fallback read anything over 24 as minutes, so "26" quietly
-    // became a 26-minute night instead of failing the range check.
     expect(parseSleepInput('26')).toBe(26 * 60);
   });
 
@@ -86,10 +83,6 @@ describe('checkInSchema — sleep must be between 0 and 24 hours', () => {
 });
 
 describe('checkInSchema — weight is the one required measurement', () => {
-  /**
-   * Why the form needs no "at least one of steps/sleep/water" rule: a valid
-   * check-in already carries a weight, so it is never empty.
-   */
   it('accepts a check-in with a weight and nothing else', () => {
     expect(checkInSchema.safeParse(values()).success).toBe(true);
   });

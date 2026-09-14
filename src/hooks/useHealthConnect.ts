@@ -26,10 +26,6 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import type { AppDispatch } from '@/store/store';
 
-/**
- * Module scope, not a ref: several screens mount this hook at once, and the
- * dashboard's Allow links would otherwise fire three overlapping reads.
- */
 let inFlight: Promise<HealthConnectStatus> | null = null;
 
 const statusFor = (granted: ReadonlyArray<HealthConnectField>): HealthConnectStatus => {
@@ -57,17 +53,6 @@ async function sync(
 
   const availability = await getAvailability();
   if (availability !== 'AVAILABLE') {
-    /**
-     * Pass the real reason through instead of flattening it. Every
-     * non-AVAILABLE state stops here, but they are not equivalent to the user:
-     * NOT_SUPPORTED hides every surface, while the three provider states keep
-     * the card and offer a way out. Collapsing them all into NOT_SUPPORTED is
-     * what left an Android 9-13 device without the provider installed showing
-     * nothing at all.
-     *
-     * The SdkAvailability members are named to match HealthConnectStatus, so
-     * this is a pass-through rather than a mapping.
-     */
     logHealthConnect('not usable yet', availability);
     dispatch(
       healthConnectSynced({
@@ -129,10 +114,8 @@ export function useHealthConnect() {
   const status = useAppSelector(selectHealthConnectStatus);
   const syncing = useAppSelector(selectHealthConnectSyncing);
 
-  /** Prompts for permission, then reads. For explicit user taps only. */
   const connect = useCallback(() => run(dispatch, 'request'), [dispatch]);
 
-  /** Re-reads what we already hold. Never prompts. */
   const refresh = useCallback(() => run(dispatch, 'refresh'), [dispatch]);
 
   return { status, syncing, connect, refresh, openSettings, openProviderInstall };
