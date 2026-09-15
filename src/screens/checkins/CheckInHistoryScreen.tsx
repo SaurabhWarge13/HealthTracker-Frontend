@@ -12,6 +12,7 @@ import {
   Skeleton,
 } from '@/components/common';
 import { CheckInRow } from '@/components/data';
+import { FIELD_LABEL, NEW_CHECKIN } from '@/content';
 import type { CheckIn } from '@/domain/checkins/types';
 import {
   selectCheckInCount,
@@ -144,7 +145,7 @@ export function CheckInHistoryScreen({
             icon={ClipboardList}
             title="No check-ins yet"
             message="Every check-in you save shows up here, newest first."
-            actionLabel="New check-in"
+            actionLabel={NEW_CHECKIN}
             onAction={() => navigation.navigate('CheckInForm')}
           />
         </EmptyCard>
@@ -192,13 +193,13 @@ function ListIntro({
         <View style={styles.legendItem}>
           <AppIcon icon={Moon} size="sm" color="userAccent" />
           <AppText variant="micro" color="textHint">
-            Sleep
+            {FIELD_LABEL.sleep}
           </AppText>
         </View>
         <View style={styles.legendItem}>
           <AppIcon icon={Droplet} size="sm" color="userAccent" />
           <AppText variant="micro" color="textHint">
-            Water
+            {FIELD_LABEL.water}
           </AppText>
         </View>
         <View style={styles.legendItem}>

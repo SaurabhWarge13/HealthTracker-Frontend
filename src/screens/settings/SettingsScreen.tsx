@@ -31,7 +31,22 @@ import { useLogoutMutation } from '@/services/api';
 import { openNotificationSettings } from '@/services/notifications';
 import { awaitSyncIdle, runSync } from '@/services/sync';
 import { loggedOut } from '@/store/auth/authSlice';
-import { REMINDER_HOUR } from '@/domain/notifications/schedule';
+import {
+  ACTION_LABEL,
+  APP_VERSION,
+  CHECKING_LABEL,
+  DISCARD_TITLE,
+  EMPTY_VALUE,
+  FAILED_LABEL,
+  FIELD_LABEL,
+  GOAL_LABEL,
+  HEALTH_CONNECT_LABEL,
+  NOT_SET,
+  PROVIDER_ACTION,
+  PROVIDER_ISSUE_COPY,
+  REMINDER_TIME_LABEL,
+  UNIT,
+} from '@/content';
 import {
   disableReminder,
   enableReminder,
@@ -49,13 +64,14 @@ import { opRetryRequested } from '@/store/sync/syncSlice';
 import { discardOp } from '@/store/checkins/checkinsCommands';
 import { profileSyncRetryRequested } from '@/store/profile/profileSlice';
 import { useHealthConnect, useProfileDiscard } from '@/hooks';
-import type { ProviderIssue } from '@/domain/healthConnect/provider';
-import type { PendingOp, SyncOpKind } from '@/domain/sync';
+import type { PendingOp } from '@/domain/sync';
 import {
+  selectFieldConnection,
   selectHealthConnect,
   selectHealthConnectProviderIssue,
   selectHealthConnectSupported,
 } from '@/store/healthConnect/healthConnectSelectors';
+import type { HealthConnectField } from '@/store/healthConnect/healthConnectSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { selectProfile } from '@/store/profile/profileSelectors';
 import { useTheme } from '@/hooks/useTheme';
@@ -74,32 +90,13 @@ import type {
   MainTabScreenProps,
 } from '@/types/navigation';
 
-const APP_VERSION = '1.0.0 (1)';
-
-const PROVIDER_ISSUE_COPY: Record<ProviderIssue, { note: string; action: string }> = {
-  missing: {
-    note: "Health Connect isn't installed on this phone, so there is nothing to read from yet.",
-    action: 'Get Health Connect',
-  },
-  disabled: {
-    note: 'Health Connect is turned off on this phone, so this app cannot read from it.',
-    action: 'Open settings',
-  },
-  updateRequired: {
-    note: 'Health Connect needs an update before this app can read from it.',
-    action: 'Update Health Connect',
-  },
-};
-
-const REMINDER_TIME_LABEL = `${REMINDER_HOUR % 12 || 12}:00 ${
-  REMINDER_HOUR < 12 ? 'AM' : 'PM'
-}`;
-
-const FAILED_LABEL: Record<SyncOpKind, string> = {
-  create: 'A new check-in',
-  update: 'An edited check-in',
-  delete: 'A deleted check-in',
-};
+const HC_ROW_FIELDS: readonly HealthConnectField[] = [
+  'weight',
+  'height',
+  'steps',
+  'sleep',
+  'water',
+];
 
 export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
   const dispatch = useAppDispatch();
@@ -109,6 +106,7 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
   const hc = useAppSelector(selectHealthConnect);
   const hcSupported = useAppSelector(selectHealthConnectSupported);
   const hcProviderIssue = useAppSelector(selectHealthConnectProviderIssue);
+  const fieldConnection = useAppSelector(selectFieldConnection);
   const { openSettings: openHealthConnectSettings, openProviderInstall } =
     useHealthConnect();
   const [logout] = useLogoutMutation();
@@ -172,9 +170,6 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
     }
   }, [signOut]);
 
-  const status = (field: 'weight' | 'height' | 'steps' | 'sleep' | 'water') =>
-    hc.availability[field] === 'PERMISSION_DENIED' ? 'notConnected' : 'connected';
-
   return (
     <AppScreen
       scroll
@@ -214,11 +209,11 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
           <View style={styles.baselineValue}>
             <AppText variant="title" numeric>
               {profile.baselineWeightKg === null
-                ? '—'
+                ? EMPTY_VALUE
                 : formatWeight(profile.baselineWeightKg)}
             </AppText>
             <AppText variant="bodySmall" color="textMuted">
-              kg
+              {UNIT.kg}
             </AppText>
             <View style={styles.spacer} />
             <AppIcon icon={ChevronRight} size="base" color="textHint" />
@@ -235,8 +230,8 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
         <AppDivider style={styles.baselineDivider} />
 
         <ListRow
-          label="Height"
-          value={profile.heightCm === null ? 'Not set' : `${profile.heightCm} cm`}
+          label={FIELD_LABEL.height}
+          value={profile.heightCm === null ? NOT_SET : `${profile.heightCm} ${UNIT.cm}`}
           valueMuted={profile.heightCm === null}
           onPress={() => edit('height')}
         />
@@ -244,26 +239,26 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
 
       <SectionCard icon={Target} tone="user" title="Goals" subtitle="Optional targets">
         <ListRow
-          label="Daily steps"
-          value={profile.stepGoal === null ? 'Not set' : formatSteps(profile.stepGoal)}
+          label={GOAL_LABEL.steps}
+          value={profile.stepGoal === null ? NOT_SET : formatSteps(profile.stepGoal)}
           valueMuted={profile.stepGoal === null}
           onPress={() => edit('stepGoal')}
         />
         <AppDivider />
         <ListRow
-          label="Daily water"
+          label={GOAL_LABEL.water}
           value={
-            profile.waterGoalMl === null ? 'Not set' : formatWater(profile.waterGoalMl)
+            profile.waterGoalMl === null ? NOT_SET : formatWater(profile.waterGoalMl)
           }
           valueMuted={profile.waterGoalMl === null}
           onPress={() => edit('waterGoal')}
         />
         <AppDivider />
         <ListRow
-          label="Nightly sleep"
+          label={GOAL_LABEL.sleep}
           value={
             profile.sleepGoalMinutes === null
-              ? 'Not set'
+              ? NOT_SET
               : formatDuration(profile.sleepGoalMinutes)
           }
           valueMuted={profile.sleepGoalMinutes === null}
@@ -271,11 +266,11 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
         />
         <AppDivider />
         <ListRow
-          label="Target weight"
+          label={GOAL_LABEL.targetWeight}
           value={
             profile.targetWeightKg === null
-              ? 'Not set'
-              : `${formatWeight(profile.targetWeightKg)} kg`
+              ? NOT_SET
+              : `${formatWeight(profile.targetWeightKg)} ${UNIT.kg}`
           }
           valueMuted={profile.targetWeightKg === null}
           onPress={() => edit('targetWeight')}
@@ -286,7 +281,7 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
         <SectionCard
           icon={Activity}
           tone="device"
-          title="Health Connect"
+          title={HEALTH_CONNECT_LABEL}
           subtitle={
             hcProviderIssue === null ? 'Connected data types' : 'Not set up yet'
           }
@@ -300,7 +295,7 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
                     : ''}
                 </AppText>
                 <AppButton
-                  label="Manage"
+                  label={ACTION_LABEL.manage}
                   variant="text"
                   tone="device"
                   size={48}
@@ -329,39 +324,22 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
                 icon={ExternalLink}
               />
             </View>
-          ) : (
+          ) : hc.hasChecked ? (
             <View style={styles.hcRows}>
-              <DataTypeStatusRow
-                label="Weight"
-                status={status('weight')}
-                muted={status('weight') === 'notConnected'}
-                chipSize="md"
-              />
-              <DataTypeStatusRow
-                label="Height"
-                status={status('height')}
-                muted={status('height') === 'notConnected'}
-                chipSize="md"
-              />
-              <DataTypeStatusRow
-                label="Steps"
-                status={status('steps')}
-                muted={status('steps') === 'notConnected'}
-                chipSize="md"
-              />
-              <DataTypeStatusRow
-                label="Sleep"
-                status={status('sleep')}
-                muted={status('sleep') === 'notConnected'}
-                chipSize="md"
-              />
-              <DataTypeStatusRow
-                label="Water"
-                status={status('water')}
-                muted={status('water') === 'notConnected'}
-                chipSize="md"
-              />
+              {HC_ROW_FIELDS.map(field => (
+                <DataTypeStatusRow
+                  key={field}
+                  label={FIELD_LABEL[field]}
+                  status={fieldConnection[field]}
+                  muted={fieldConnection[field] === 'notConnected'}
+                  chipSize="md"
+                />
+              ))}
             </View>
+          ) : (
+            <AppText variant="micro" color="textHint">
+              {CHECKING_LABEL}
+            </AppText>
           )}
         </SectionCard>
       ) : null}
@@ -379,7 +357,7 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
                 cannot be delivered.
               </InlineNote>
               <AppButton
-                label="Open settings"
+                label={PROVIDER_ACTION.disabled}
                 variant="text"
                 size={48}
                 onPress={openNotificationSettings}
@@ -422,7 +400,7 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
                     </AppText>
                   </View>
                   <AppButton
-                    label="Retry"
+                    label={ACTION_LABEL.retry}
                     variant="text"
                     tone="device"
                     size={32}
@@ -454,7 +432,7 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
                     </AppText>
                   </View>
                   <AppButton
-                    label="Retry"
+                    label={ACTION_LABEL.retry}
                     variant="text"
                     tone="device"
                     size={32}
@@ -549,12 +527,6 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
     </AppScreen>
   );
 }
-
-const DISCARD_TITLE: Record<SyncOpKind, string> = {
-  create: 'Discard this check-in?',
-  update: 'Discard this edit?',
-  delete: 'Keep this check-in after all?',
-};
 
 function discardMessage(op: PendingOp): string {
   const before = op.before ?? null;

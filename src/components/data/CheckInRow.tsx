@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Clock, Droplet, Moon, TriangleAlert, type LucideIcon } from 'lucide-react-native';
 import { AppIcon, AppText } from '@/components/common';
+import { FIELD_LABEL, UNIT } from '@/content';
 import { moodIcon } from '@/components/checkins/MoodIcon';
 import { MOOD_LABELS, type CheckIn } from '@/domain/checkins/types';
 import { useTheme } from '@/hooks/useTheme';
@@ -228,8 +229,8 @@ export function CheckInRow({
   const spoken = [
     `${date}, ${formatTime(checkIn.createdAt)}`,
     `${formatWeightWithUnit(checkIn.weightKg)}, ${deltaPhrase(deltaKg)}`,
-    metricPhrase('Sleep', checkIn.sleepMinutes, sleepGoalMinutes, formatDuration),
-    metricPhrase('Water', checkIn.waterMl, waterGoalMl, formatWater),
+    metricPhrase(FIELD_LABEL.sleep, checkIn.sleepMinutes, sleepGoalMinutes, formatDuration),
+    metricPhrase(FIELD_LABEL.water, checkIn.waterMl, waterGoalMl, formatWater),
     checkIn.mood === null ? 'Mood not recorded' : MOOD_LABELS[checkIn.mood],
     failedSync ? 'Not synced' : pendingSync ? 'Waiting to sync' : '',
   ]
@@ -256,7 +257,7 @@ export function CheckInRow({
             {formatWeight(checkIn.weightKg)}
           </AppText>
           <AppText variant="bodySmall" color="textMuted">
-            kg
+            {UNIT.kg}
           </AppText>
         </View>
         <View style={styles.timeRow}>

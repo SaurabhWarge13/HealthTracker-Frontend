@@ -7,7 +7,7 @@ export {
   type AppButtonTone,
   type AppButtonVariant,
 } from './AppButton';
-export { AppIcon, iconPixelSize, type AppIconProps, type AppIconSize } from './AppIcon';
+export { AppIcon, type AppIconProps, type AppIconSize } from './AppIcon';
 export {
   AppIconButton,
   type AppIconButtonProps,

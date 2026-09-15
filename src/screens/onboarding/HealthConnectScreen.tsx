@@ -6,15 +6,16 @@ import { DataTypeStatusRow } from '@/components/data';
 import { SectionCard } from '@/components/layout';
 import { OnboardingStepLayout } from '@/components/onboarding';
 import { useHealthConnect, useKeyboardSafeNav } from '@/hooks';
+import { ACTION_LABEL, FIELD_LABEL, HEALTH_CONNECT_LABEL } from '@/content';
 import { healthConnectChosen, stepEntered } from '@/store/onboarding/onboardingSlice';
 import { useAppDispatch } from '@/store/hooks';
 import { spacing } from '@/theme';
 import type { OnboardingScreenProps } from '@/types/navigation';
 
 const DATA_TYPES = [
-  { label: 'Steps', icon: Activity },
-  { label: 'Sleep', icon: Moon },
-  { label: 'Water', icon: Droplet },
+  { label: FIELD_LABEL.steps, icon: Activity },
+  { label: FIELD_LABEL.sleep, icon: Moon },
+  { label: FIELD_LABEL.water, icon: Droplet },
 ] as const;
 
 export function HealthConnectScreen({
@@ -62,7 +63,7 @@ export function HealthConnectScreen({
             onPress={handleConnect}
           />
           <AppButton
-            label="Skip for now"
+            label={ACTION_LABEL.skipForNow}
             variant="secondary"
             size={52}
             fullWidth
@@ -75,7 +76,7 @@ export function HealthConnectScreen({
       <SectionCard
         icon={Activity}
         tone="device"
-        title="Health Connect"
+        title={HEALTH_CONNECT_LABEL}
         subtitle="Read-only access, 3 data types"
       >
         <View style={styles.rows}>

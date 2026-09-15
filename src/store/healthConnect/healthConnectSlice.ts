@@ -12,6 +12,8 @@ export type HealthConnectStatus =
 
 export type FieldAvailability = 'AVAILABLE' | 'NO_DATA' | 'PERMISSION_DENIED';
 
+export type FieldConnection = 'connected' | 'notConnected';
+
 export type HealthConnectField = 'weight' | 'height' | 'steps' | 'sleep' | 'water';
 
 export type TodayReadings = {

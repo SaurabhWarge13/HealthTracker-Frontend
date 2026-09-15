@@ -7,6 +7,7 @@ import { AppButton, AppText } from '@/components/common';
 import { SectionCard } from '@/components/layout';
 import { GoalInputRow, OnboardingStepLayout } from '@/components/onboarding';
 import { useKeyboardSafeNav } from '@/hooks';
+import { ACTION_LABEL, EMPTY_VALUE, GOAL_LABEL, UNIT } from '@/content';
 import {
   goalOrNull,
   goalsSchema,
@@ -123,7 +124,7 @@ export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
   );
 
   const baselineText =
-    draft.weightKg !== null ? `today's ${draft.weightKg.toFixed(1)} kg` : 'today';
+    draft.weightKg !== null ? `today's ${draft.weightKg.toFixed(1)} ${UNIT.kg}` : 'today';
 
   return (
     <OnboardingStepLayout
@@ -140,7 +141,7 @@ export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
             onPress={handleSubmit(onSubmit)}
           />
           <AppButton
-            label="Skip for now"
+            label={ACTION_LABEL.skipForNow}
             variant="secondary"
             size={52}
             fullWidth
@@ -160,8 +161,8 @@ export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
             control={control}
             name="stepGoal"
             icon={Activity}
-            label="Daily steps"
-            unit="steps"
+            label={GOAL_LABEL.steps}
+            unit={UNIT.steps}
             placeholder="8,000"
             keyboardType="number-pad"
           />
@@ -169,8 +170,8 @@ export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
             control={control}
             name="waterGoalLitres"
             icon={Droplet}
-            label="Daily water"
-            unit="L"
+            label={GOAL_LABEL.water}
+            unit={UNIT.litres}
             placeholder="2.4"
             keyboardType="decimal-pad"
           />
@@ -178,8 +179,8 @@ export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
             control={control}
             name="sleepGoalHours"
             icon={Moon}
-            label="Nightly sleep"
-            unit="hours"
+            label={GOAL_LABEL.sleep}
+            unit={UNIT.hours}
             placeholder="8"
             keyboardType="decimal-pad"
           />
@@ -187,9 +188,9 @@ export function GoalsScreen({ navigation }: OnboardingScreenProps<'Goals'>) {
             control={control}
             name="targetWeight"
             icon={Target}
-            label="Target weight"
-            unit="kg"
-            placeholder="—"
+            label={GOAL_LABEL.targetWeight}
+            unit={UNIT.kg}
+            placeholder={EMPTY_VALUE}
             keyboardType="decimal-pad"
           />
         </View>

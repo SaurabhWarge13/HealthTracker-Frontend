@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { AppIcon, AppText } from '@/components/common';
+import { EMPTY_VALUE } from '@/content';
 import type { Attainment, AttainmentStatus } from '@/domain/progress/attainment';
 import { useTheme } from '@/hooks/useTheme';
 import { radius, scaleFont, spacing, type ColorName } from '@/theme';
@@ -53,9 +54,9 @@ export function AttainmentRow({
   const graded =
     status === 'onTrack' || status === 'mixed' || status === 'offTarget';
 
-  const averageText = average === null ? '—' : format(average);
+  const averageText = average === null ? EMPTY_VALUE : format(average);
 
-  const heroValue = graded ? `${hits}` : status === 'notRecorded' ? '—' : averageText;
+  const heroValue = graded ? `${hits}` : status === 'notRecorded' ? EMPTY_VALUE : averageText;
   const heroSuffix = graded ? `/${recorded}` : null;
 
   const footText = graded

@@ -11,6 +11,7 @@ import {
 } from '@/components/common';
 import { ControlledInput } from '@/components/forms';
 import { IconTile } from '@/components/layout';
+import { EMAIL_LABEL, EMAIL_PLACEHOLDER, PASSWORD_LABEL, SIGN_IN } from '@/content';
 import { authMessage } from '@/domain/api/errors';
 import { loginSchema, type LoginValues } from '@/domain/auth/validation';
 import { useKeyboardSafeNav } from '@/hooks/useKeyboardSafeNav';
@@ -103,9 +104,9 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
       <ControlledInput
         control={control}
         name="email"
-        label="Email"
+        label={EMAIL_LABEL}
         leadingIcon={Mail}
-        placeholder="you@example.com"
+        placeholder={EMAIL_PLACEHOLDER}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
@@ -120,7 +121,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         control={control}
         name="password"
         inputRef={passwordRef}
-        label="Password"
+        label={PASSWORD_LABEL}
         leadingIcon={Lock}
         placeholder="Your password"
         secureToggle
@@ -134,7 +135,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
       />
 
       <AppButton
-        label="Sign in"
+        label={SIGN_IN}
         size={56}
         fullWidth
         loading={submitting}

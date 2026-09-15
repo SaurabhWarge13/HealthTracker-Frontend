@@ -22,6 +22,17 @@ import { CheckInMissingCard, moodIcon } from '@/components/checkins';
 import { DeltaBadge, MeasurementRow } from '@/components/data';
 import { ScreenHeader, SectionCard } from '@/components/layout';
 import { AppDialog, PopoverMenu, type PopoverAnchor } from '@/components/overlays';
+import {
+  ACTION_LABEL,
+  CHECK_IN,
+  DELETE_CHECKIN_TITLE,
+  FIELD_LABEL,
+  MEASUREMENTS_SUBTITLE,
+  MEASUREMENTS_TITLE,
+  NOT_SET,
+  UNIT,
+  deleteCheckInMessage,
+} from '@/content';
 import { buildCheckInLink } from '@/navigation/deepLinks';
 import {
   selectCheckInById,
@@ -81,7 +92,7 @@ export function CheckInDetailScreen({
       <AppScreen
         padded
         header={
-          <ScreenHeader variant="nav" title="Check-in" onBack={navigation.goBack} />
+          <ScreenHeader variant="nav" title={CHECK_IN} onBack={navigation.goBack} />
         }
       >
         <CheckInMissingCard
@@ -101,10 +112,10 @@ export function CheckInDetailScreen({
       header={
         <ScreenHeader
           variant="nav"
-          title="Check-in"
+          title={CHECK_IN}
           onBack={navigation.goBack}
           actionIcon={MoreVertical}
-          actionIconLabel="More options"
+          actionIconLabel={ACTION_LABEL.moreOptions}
           onAction={openMenu}
           actionRef={menuButtonRef}
         />
@@ -118,7 +129,7 @@ export function CheckInDetailScreen({
               {formatWeight(checkIn.weightKg)}
             </AppText>
             <AppText variant="body" color="textMuted">
-              kg
+              {UNIT.kg}
             </AppText>
           </View>
 
@@ -139,8 +150,8 @@ export function CheckInDetailScreen({
       <SectionCard
         icon={Activity}
         tone="device"
-        title="Measurements"
-        subtitle="As recorded at the time"
+        title={MEASUREMENTS_TITLE}
+        subtitle={MEASUREMENTS_SUBTITLE}
         bodyPadding={false}
       >
         <View style={styles.rows}>
@@ -148,7 +159,7 @@ export function CheckInDetailScreen({
             <>
               <MeasurementRow
                 icon={Activity}
-                label="Steps"
+                label={FIELD_LABEL.steps}
                 value={formatSteps(checkIn.steps)}
                 source={checkIn.sources.steps}
               />
@@ -160,7 +171,7 @@ export function CheckInDetailScreen({
             <>
               <MeasurementRow
                 icon={Moon}
-                label="Sleep"
+                label={FIELD_LABEL.sleep}
                 value={formatDuration(checkIn.sleepMinutes)}
                 source={checkIn.sources.sleep}
               />
@@ -172,7 +183,7 @@ export function CheckInDetailScreen({
             <>
               <MeasurementRow
                 icon={Droplet}
-                label="Water"
+                label={FIELD_LABEL.water}
                 value={formatWater(checkIn.waterMl)}
                 source={checkIn.sources.water}
               />
@@ -182,8 +193,8 @@ export function CheckInDetailScreen({
 
           <MeasurementRow
             icon={Ruler}
-            label="Height"
-            value={checkIn.heightCm === null ? 'Not set' : `${checkIn.heightCm} cm`}
+            label={FIELD_LABEL.height}
+            value={checkIn.heightCm === null ? NOT_SET : `${checkIn.heightCm} ${UNIT.cm}`}
             source={checkIn.heightCm === null ? undefined : 'manual'}
           />
         </View>
@@ -222,7 +233,7 @@ export function CheckInDetailScreen({
             },
           },
           {
-            label: 'Delete',
+            label: ACTION_LABEL.delete,
             icon: Trash2,
             destructive: true,
             onPress: () => {
@@ -235,11 +246,9 @@ export function CheckInDetailScreen({
 
       <AppDialog
         visible={confirmDelete}
-        title="Delete this check-in?"
-        message={`The entry from ${formatLongDateTime(
-          checkIn.createdAt,
-        )} will be removed from your history. This can't be undone.`}
-        confirm={{ label: 'Delete', onPress: handleDelete, destructive: true }}
+        title={DELETE_CHECKIN_TITLE}
+        message={deleteCheckInMessage(formatLongDateTime(checkIn.createdAt))}
+        confirm={{ label: ACTION_LABEL.delete, onPress: handleDelete, destructive: true }}
         onCancel={() => setConfirmDelete(false)}
       />
     </AppScreen>

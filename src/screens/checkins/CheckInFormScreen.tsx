@@ -10,6 +10,17 @@ import { ControlledInput } from '@/components/forms';
 import { ScreenHeader, SectionCard, StickyFooter } from '@/components/layout';
 import { AppDialog } from '@/components/overlays';
 import { useKeyboardSafeNav } from '@/hooks';
+import {
+  ACTION_LABEL,
+  DELETE_CHECKIN_TITLE,
+  FIELD_LABEL,
+  MEASUREMENTS_SUBTITLE,
+  MEASUREMENTS_TITLE,
+  NEW_CHECKIN,
+  NOT_SET,
+  UNIT,
+  deleteCheckInMessage,
+} from '@/content';
 import type { CheckInSources, Mood, SourcedField } from '@/domain/checkins/types';
 import {
   checkInSchema,
@@ -210,7 +221,7 @@ export function CheckInFormScreen({
       header={
         <ScreenHeader
           variant="modal"
-          title={isEditing ? 'Edit check-in' : 'New check-in'}
+          title={isEditing ? 'Edit check-in' : NEW_CHECKIN}
           subtitle={subtitle}
           onBack={() => safeNav(navigation.goBack)}
           backIcon={X}
@@ -236,18 +247,18 @@ export function CheckInFormScreen({
       <SectionCard
         icon={Activity}
         tone="device"
-        title="Measurements"
+        title={MEASUREMENTS_TITLE}
         subtitle={
-          isEditing ? 'As recorded at the time' : 'Prefilled where available'
+          isEditing ? MEASUREMENTS_SUBTITLE : 'Prefilled where available'
         }
       >
         <View style={styles.fields}>
           <MeasurementField
             control={control}
             name="weight"
-            label="Weight"
+            label={FIELD_LABEL.weight}
             source={sourceFor('weight')}
-            suffix="kg"
+            suffix={UNIT.kg}
             placeholder="72.0"
             size="lg"
             onValueChange={() => markEdited('weight')}
@@ -261,10 +272,10 @@ export function CheckInFormScreen({
           <MeasurementField
             control={control}
             name="steps"
-            label="Steps"
+            label={FIELD_LABEL.steps}
             source={sourceFor('steps')}
             valueSize="body"
-            suffix="steps"
+            suffix={UNIT.steps}
             placeholder={formatSteps(8000)}
             keyboardType="number-pad"
             size="md"
@@ -274,7 +285,7 @@ export function CheckInFormScreen({
           <MeasurementField
             control={control}
             name="sleep"
-            label="Sleep"
+            label={FIELD_LABEL.sleep}
             source={sourceFor('sleep')}
             valueSize="body"
             trailing={<AppIcon icon={Moon} size="base" color="textHint" />}
@@ -288,10 +299,10 @@ export function CheckInFormScreen({
           <MeasurementField
             control={control}
             name="water"
-            label="Water"
+            label={FIELD_LABEL.water}
             source={sourceFor('water')}
             valueSize="body"
-            suffix="L"
+            suffix={UNIT.litres}
             placeholder="2.0"
             size="md"
             onValueChange={() => markEdited('water')}
@@ -300,9 +311,9 @@ export function CheckInFormScreen({
           <AppDivider style={styles.heightDivider} />
           <MeasurementRow
             icon={Ruler}
-            label="Height"
+            label={FIELD_LABEL.height}
             value={
-              profile.heightCm === null ? 'Not set' : `${profile.heightCm} cm`
+              profile.heightCm === null ? NOT_SET : `${profile.heightCm} ${UNIT.cm}`
             }
             actionLabel="Change"
             onAction={() =>
@@ -332,15 +343,11 @@ export function CheckInFormScreen({
 
       <AppDialog
         visible={confirmDelete}
-        title="Delete this check-in?"
-        message={
-          existing
-            ? `The entry from ${formatLongDateTime(
-                existing.createdAt,
-              )} will be removed from your history. This can't be undone.`
-            : "This entry will be removed from your history. This can't be undone."
-        }
-        confirm={{ label: 'Delete', onPress: handleDelete, destructive: true }}
+        title={DELETE_CHECKIN_TITLE}
+        message={deleteCheckInMessage(
+          existing ? formatLongDateTime(existing.createdAt) : null,
+        )}
+        confirm={{ label: ACTION_LABEL.delete, onPress: handleDelete, destructive: true }}
         onCancel={() => setConfirmDelete(false)}
       />
     </AppScreen>

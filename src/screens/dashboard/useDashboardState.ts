@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { RingState } from '@/components/data';
+import { CHECKING_LABEL } from '@/content';
 import type { ProviderIssue } from '@/domain/healthConnect/provider';
 import {
+  selectFieldConnection,
   selectHealthConnect,
   selectHealthConnectProviderIssue,
   selectWeightNudge,
 } from '@/store/healthConnect/healthConnectSelectors';
+import type { HealthConnectField } from '@/store/healthConnect/healthConnectSlice';
 import { useAppSelector } from '@/store/hooks';
 import { selectCheckInsUnsettled } from '@/store/checkins/checkinsSelectors';
 import {
@@ -53,8 +56,11 @@ type Args = {
 const ratio = (value: number | null, goal: number | null): number =>
   value === null || goal === null || goal <= 0 ? 0 : value / goal;
 
+const RING_FIELDS: readonly HealthConnectField[] = ['steps', 'sleep', 'water'];
+
 export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
   const hc = useAppSelector(selectHealthConnect);
+  const fieldConnection = useAppSelector(selectFieldConnection);
   const providerIssue = useAppSelector(selectHealthConnectProviderIssue);
   const nudge = useAppSelector(selectWeightNudge);
   const loading = useAppSelector(selectCheckInsUnsettled);
@@ -97,17 +103,17 @@ export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
     const steps = metric(
       hc.today.steps,
       goals.steps,
-      hc.availability.steps === 'PERMISSION_DENIED',
+      fieldConnection.steps === 'notConnected',
     );
     const sleep = metric(
       hc.today.sleepMinutes,
       goals.sleep,
-      hc.availability.sleep === 'PERMISSION_DENIED',
+      fieldConnection.sleep === 'notConnected',
     );
     const water = metric(
       hc.today.waterMl,
       goals.water,
-      hc.availability.water === 'PERMISSION_DENIED',
+      fieldConnection.water === 'notConnected',
     );
 
     const syncedLabel =
@@ -118,9 +124,8 @@ export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
           })}`
         : 'Not synced yet';
 
-    const RING_FIELDS = ['steps', 'sleep', 'water'] as const;
     const grantedRings = RING_FIELDS.filter(
-      field => hc.availability[field] !== 'PERMISSION_DENIED',
+      field => fieldConnection[field] === 'connected',
     ).length;
     const nothingRecorded =
       grantedRings > 0 &&
@@ -129,7 +134,7 @@ export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
       water.value === null;
 
     const footerLabel = !hc.hasChecked
-      ? 'Checking Health Connect…'
+      ? CHECKING_LABEL
       : grantedRings < RING_FIELDS.length
       ? `${grantedRings} of 3 permissions on`
       : nothingRecorded
@@ -165,6 +170,7 @@ export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
     entryCount,
     failedCount,
     failedIds,
+    fieldConnection,
     goals.sleep,
     goals.steps,
     goals.water,

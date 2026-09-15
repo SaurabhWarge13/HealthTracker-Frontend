@@ -36,6 +36,13 @@ import {
   WeightNudgeBanner,
 } from '@/components/dashboard';
 import { DashboardHeader, SectionCard } from '@/components/layout';
+import {
+  ACTION_LABEL,
+  EMPTY_VALUE,
+  FIELD_LABEL,
+  NEW_CHECKIN,
+  UNIT,
+} from '@/content';
 import { hasPlottableTrend } from '@/domain/progress/trend';
 import { useHealthConnect } from '@/hooks';
 import {
@@ -123,7 +130,7 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         label="Starting"
         value={
           progress.startingWeightKg === null
-            ? '—'
+            ? EMPTY_VALUE
             : formatWeight(progress.startingWeightKg)
         }
       />,
@@ -131,7 +138,7 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         key="target"
         label="Target"
         value={
-          profile.targetWeightKg === null ? '—' : formatWeight(profile.targetWeightKg)
+          profile.targetWeightKg === null ? EMPTY_VALUE : formatWeight(profile.targetWeightKg)
         }
       />,
     ];
@@ -181,7 +188,7 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
           detail="Showing your saved check-ins."
           trailing={
             <AppButton
-              label="Retry"
+              label={ACTION_LABEL.retry}
               variant="text"
               size={32}
               onPress={() => { runSync(store); }}
@@ -228,7 +235,7 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         subtitle="Based on your check-ins"
         footer={
           <AppButton
-            label="New check-in"
+            label={NEW_CHECKIN}
             size={52}
             fullWidth
             icon={Plus}
@@ -245,16 +252,16 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
                 label="Starting"
                 value={
                   progress.startingWeightKg === null
-                    ? '—'
-                    : `${formatWeight(progress.startingWeightKg)} kg`
+                    ? EMPTY_VALUE
+                    : `${formatWeight(progress.startingWeightKg)} ${UNIT.kg}`
                 }
               />
               <StatTile
                 label="Target"
                 value={
                   profile.targetWeightKg === null
-                    ? '—'
-                    : `${formatWeight(profile.targetWeightKg)} kg`
+                    ? EMPTY_VALUE
+                    : `${formatWeight(profile.targetWeightKg)} ${UNIT.kg}`
                 }
               />
             </View>
@@ -275,11 +282,11 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
             <View style={styles.weightRow}>
               <AppText variant="hero" numeric>
                 {progress.currentWeightKg === null
-                  ? '—'
+                  ? EMPTY_VALUE
                   : formatWeight(progress.currentWeightKg)}
               </AppText>
               <AppText variant="body" color="textMuted">
-                kg
+                {UNIT.kg}
               </AppText>
               <View style={styles.spacer} />
               <StatusPill
@@ -334,14 +341,14 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
             <AttainmentRow
               attainment={habits.sleep}
               icon={Moon}
-              label="Sleep"
+              label={FIELD_LABEL.sleep}
               format={formatDurationShort}
               onSetGoal={() => openGoal('sleepGoal')}
             />
             <AttainmentRow
               attainment={habits.water}
               icon={Droplet}
-              label="Water"
+              label={FIELD_LABEL.water}
               format={formatWater}
               onSetGoal={() => openGoal('waterGoal')}
             />
@@ -362,7 +369,7 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
                   {view.today.footerLabel}
                 </AppText>
                 <AppButton
-                  label="Manage"
+                  label={ACTION_LABEL.manage}
                   variant="text"
                   tone="device"
                   size={48}
@@ -386,7 +393,7 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
             <View style={styles.rings}>
               <MetricRingItem
                 icon={Activity}
-                label="Steps"
+                label={FIELD_LABEL.steps}
                 state={view.today.steps.state}
                 value={
                   view.today.steps.value === null
@@ -403,7 +410,7 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
               />
               <MetricRingItem
                 icon={Moon}
-                label="Sleep"
+                label={FIELD_LABEL.sleep}
                 state={view.today.sleep.state}
                 value={
                   view.today.sleep.value === null
@@ -420,7 +427,7 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
               />
               <MetricRingItem
                 icon={Droplet}
-                label="Water"
+                label={FIELD_LABEL.water}
                 state={view.today.water.state}
                 value={
                   view.today.water.value === null

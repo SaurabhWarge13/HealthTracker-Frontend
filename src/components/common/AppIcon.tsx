@@ -46,5 +46,3 @@ export function AppIcon({
     />
   );
 }
-
-export const iconPixelSize = (size: AppIconSize): number => SIZE[size].size;

@@ -2,6 +2,10 @@ import { createSelector } from '@reduxjs/toolkit';
 import { providerIssueFor } from '@/domain/healthConnect/provider';
 import type { RootState } from '@/store/rootReducer';
 import { selectLatestCheckIn } from '@/store/checkins/checkinsSelectors';
+import type {
+  FieldConnection,
+  HealthConnectField,
+} from './healthConnectSlice';
 
 export const selectHealthConnect = (state: RootState) => state.healthConnect;
 
@@ -27,6 +31,20 @@ export const selectHealthConnectProviderIssue = createSelector(
 export const selectHealthConnectUsable = createSelector(
   selectHealthConnectStatus,
   status => status === 'CONNECTED' || status === 'PARTIALLY_CONNECTED',
+);
+
+const selectAvailability = (state: RootState) =>
+  state.healthConnect.availability;
+
+export const selectFieldConnection = createSelector(
+  selectAvailability,
+  availability =>
+    Object.fromEntries(
+      Object.entries(availability).map(([field, value]) => [
+        field,
+        value === 'PERMISSION_DENIED' ? 'notConnected' : 'connected',
+      ]),
+    ) as Record<HealthConnectField, FieldConnection>,
 );
 
 const MEANINGFUL_DIFFERENCE_KG = 0.2;

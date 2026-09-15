@@ -7,6 +7,7 @@ import { AppButton, InlineNote } from '@/components/common';
 import { MeasurementField } from '@/components/checkins';
 import { OnboardingStepLayout } from '@/components/onboarding';
 import { useKeyboardSafeNav } from '@/hooks';
+import { ACTION_LABEL, FIELD_LABEL, UNIT } from '@/content';
 import {
   baselineSchema,
   type BaselinePayload,
@@ -90,7 +91,7 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
       onBack={() => safeNav(navigation.goBack)}
       footer={
         <AppButton
-          label="Continue"
+          label={ACTION_LABEL.continue}
           size={56}
           fullWidth
           disabled={!formState.isValid}
@@ -112,9 +113,9 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
       <MeasurementField
         control={control}
         name="weight"
-        label="Weight"
+        label={FIELD_LABEL.weight}
         source={weightFromDevice ? 'healthConnect' : undefined}
-        suffix="kg"
+        suffix={UNIT.kg}
         placeholder="72.4"
         returnKeyType="next"
         onSubmitEditing={() => heightRef.current?.focus()}
@@ -126,9 +127,9 @@ export function BaselineScreen({ navigation }: OnboardingScreenProps<'Baseline'>
           control={control}
           name="height"
           inputRef={heightRef}
-          label="Height"
+          label={FIELD_LABEL.height}
           source={heightFromDevice ? 'healthConnect' : undefined}
-          suffix="cm"
+          suffix={UNIT.cm}
           placeholder="168"
           keyboardType="number-pad"
           returnKeyType="done"

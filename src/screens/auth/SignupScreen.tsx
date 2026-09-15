@@ -6,6 +6,7 @@ import { Activity, Lock, Mail } from 'lucide-react-native';
 import { AppButton, AppScreen, AppText } from '@/components/common';
 import { ControlledInput } from '@/components/forms';
 import { IconTile } from '@/components/layout';
+import { EMAIL_LABEL, EMAIL_PLACEHOLDER, PASSWORD_LABEL, SIGN_IN } from '@/content';
 import { authMessage } from '@/domain/api/errors';
 import { signupSchema, type SignupValues } from '@/domain/auth/validation';
 import { useKeyboardSafeNav } from '@/hooks/useKeyboardSafeNav';
@@ -77,7 +78,7 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
             Already have an account?
           </AppText>
           <AppButton
-            label="Sign in"
+            label={SIGN_IN}
             variant="text"
             size={48}
             onPress={() => safeNav(navigation.goBack)}
@@ -95,9 +96,9 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
       <ControlledInput
         control={control}
         name="email"
-        label="Email"
+        label={EMAIL_LABEL}
         leadingIcon={Mail}
-        placeholder="you@example.com"
+        placeholder={EMAIL_PLACEHOLDER}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
@@ -112,7 +113,7 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
         control={control}
         name="password"
         inputRef={passwordRef}
-        label="Password"
+        label={PASSWORD_LABEL}
         leadingIcon={Lock}
         placeholder="At least 8 characters"
         secureToggle

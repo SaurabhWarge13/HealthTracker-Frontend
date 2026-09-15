@@ -2,6 +2,7 @@ import React from 'react';
 import { AppScreen } from '@/components/common';
 import { CheckInMissingCard } from '@/components/checkins';
 import { ScreenHeader } from '@/components/layout';
+import { CHECK_IN } from '@/content';
 import type { MainStackScreenProps } from '@/types/navigation';
 
 export function CheckInNotFoundScreen({
@@ -11,7 +12,7 @@ export function CheckInNotFoundScreen({
     <AppScreen
       padded
       header={
-        <ScreenHeader variant="nav" title="Check-in" onBack={navigation.goBack} />
+        <ScreenHeader variant="nav" title={CHECK_IN} onBack={navigation.goBack} />
       }
     >
       <CheckInMissingCard
