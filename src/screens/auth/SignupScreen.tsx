@@ -107,6 +107,7 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
         returnKeyType="next"
         onSubmitEditing={() => passwordRef.current?.focus()}
         submitBehavior="submit"
+        editable={!submitting}
       />
 
       <ControlledInput
@@ -125,6 +126,7 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
         onSubmitEditing={() => confirmRef.current?.focus()}
         submitBehavior="submit"
         containerStyle={styles.field}
+        editable={!submitting}
       />
 
       <ControlledInput
@@ -142,6 +144,7 @@ export function SignupScreen({ navigation }: AuthScreenProps<'Signup'>) {
         returnKeyType="done"
         onSubmitEditing={submit}
         containerStyle={styles.field}
+        editable={!submitting}
       />
 
       <AppButton

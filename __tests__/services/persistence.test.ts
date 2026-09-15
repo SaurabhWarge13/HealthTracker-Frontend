@@ -5,13 +5,30 @@ import {
   startPersisting,
   storage,
 } from '@/services/storage';
-import { sessionStarted, loggedOut } from '@/store/auth/authSlice';
-import { checkInsReplaced } from '@/store/checkins/checkinsSlice';
+import {
+  expiryAcknowledged,
+  loggedOut,
+  sessionExpired,
+  sessionStarted,
+  tokensRefreshed,
+} from '@/store/auth/authSlice';
+import {
+  checkInsCleared,
+  checkInsReplaced,
+} from '@/store/checkins/checkinsSlice';
+import { draftCleared } from '@/store/onboarding/onboardingSlice';
+import { profileCompleted, profileReset } from '@/store/profile/profileSlice';
 import {
   notificationPermissionRead,
   reminderEnabledChanged,
 } from '@/store/settings/settingsSlice';
 import { createAppStore } from '@/store/store';
+import {
+  opEnqueued,
+  serverIdsRecorded,
+  syncCleared,
+} from '@/store/sync/syncSlice';
+import { makePendingOp } from '@/domain/sync';
 import type { CheckIn } from '@/domain/checkins/types';
 
 const PERSIST_KEY = 'state:v1';
@@ -333,6 +350,18 @@ describe('startPersisting', () => {
     expect(loadPersistedState()).toBeUndefined();
   });
 
+  it('keeps writing while an account owns the device, even with no live session', () => {
+    const store = createAppStore();
+    startPersisting(store);
+    store.dispatch(signIn);
+    store.dispatch(sessionExpired('Your session ended'));
+    store.dispatch(checkInsReplaced({ entries: [checkIn], at: 1 }));
+    jest.advanceTimersByTime(WRITE_DELAY_MS);
+
+    expect(loadPersistedState()?.auth?.hasSession).toBe(false);
+    expect(loadPersistedState()?.checkins?.allIds).toEqual(['local_1']);
+  });
+
   it('flushes on backgrounding, so a change made just before a swipe survives', () => {
     let onAppStateChange: ((status: AppStateStatus) => void) | undefined;
     const spy = jest
@@ -351,5 +380,138 @@ describe('startPersisting', () => {
     expect(loadPersistedState()?.checkins?.allIds).toEqual(['local_1']);
 
     spy.mockRestore();
+  });
+});
+
+// Regression cover for FlowQAReport Bug 1 / Bug 2: durability must follow account
+// ownership, never `expiredReason` — which exists only to drive the Login banner.
+describe('session expiry never costs the user their offline work', () => {
+  /** An expired session that still holds unsynced work, already flushed to disk. */
+  const expiredWithWork = () => {
+    const store = createAppStore();
+    startPersisting(store);
+    store.dispatch(signIn);
+    store.dispatch(checkInsReplaced({ entries: [checkIn], at: 1 }));
+    store.dispatch(serverIdsRecorded({ local_1: 'srv_1' }));
+    store.dispatch(
+      opEnqueued(makePendingOp('op_1', 'create', 'local_1', checkIn, 1)),
+    );
+    store.dispatch(
+      profileCompleted({
+        name: 'Sam',
+        baselineWeightKg: 80,
+        heightCm: 180,
+        stepGoal: null,
+        waterGoalMl: null,
+        sleepGoalMinutes: null,
+        targetWeightKg: null,
+        baselineSetAt: 1_000,
+      }),
+    );
+    jest.advanceTimersByTime(WRITE_DELAY_MS);
+
+    store.dispatch(sessionExpired('Your session ended'));
+    jest.advanceTimersByTime(WRITE_DELAY_MS);
+
+    expect(loadPersistedState()?.sync?.ops).toHaveLength(1);
+    return store;
+  };
+
+  it('keeps the blob when the expiry banner is dismissed', () => {
+    const store = expiredWithWork();
+
+    store.dispatch(expiryAcknowledged());
+    jest.advanceTimersByTime(WRITE_DELAY_MS);
+
+    const restored = loadPersistedState();
+    expect(restored).toBeDefined();
+    expect(restored?.checkins?.allIds).toEqual(['local_1']);
+    expect(restored?.sync?.ops).toHaveLength(1);
+    expect(restored?.profile?.baselineWeightKg).toBe(80);
+  });
+
+  it('survives a login attempt that fails on a wrong password', () => {
+    const store = expiredWithWork();
+
+    // LoginScreen.onSubmit acknowledges the banner before the request resolves.
+    store.dispatch(expiryAcknowledged());
+    jest.advanceTimersByTime(WRITE_DELAY_MS);
+    // ...then signIn rejects, so no further auth action is ever dispatched.
+    jest.advanceTimersByTime(WRITE_DELAY_MS * 4);
+
+    const restored = loadPersistedState();
+    expect(restored?.checkins?.byId.local_1?.weightKg).toBe(72);
+    expect(restored?.sync?.ops[0]?.entityId).toBe('local_1');
+    expect(restored?.sync?.serverIds).toEqual({ local_1: 'srv_1' });
+    expect(restored?.auth?.userId).toBe('u1');
+  });
+
+  it('survives repeated failed attempts, whatever made them fail', () => {
+    const store = expiredWithWork();
+
+    // Offline, timeout, server down, wrong password — all leave Redux identical:
+    // the banner is acknowledged and nothing else is dispatched.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      store.dispatch(expiryAcknowledged());
+      jest.advanceTimersByTime(WRITE_DELAY_MS);
+    }
+
+    expect(loadPersistedState()?.sync?.ops).toHaveLength(1);
+    expect(loadPersistedState()?.checkins?.allIds).toEqual(['local_1']);
+  });
+
+  it('keeps the blob through every step of a successful sign-in', () => {
+    const store = expiredWithWork();
+
+    store.dispatch(expiryAcknowledged());
+    store.dispatch(tokensRefreshed({ accessToken: 'access-token-value' }));
+    // establishSession is now awaiting GET /profile; hasSession is still false.
+    jest.advanceTimersByTime(WRITE_DELAY_MS * 8);
+    expect(loadPersistedState()?.checkins?.allIds).toEqual(['local_1']);
+
+    store.dispatch(signIn);
+    jest.advanceTimersByTime(WRITE_DELAY_MS);
+
+    const restored = loadPersistedState();
+    expect(restored?.auth?.hasSession).toBe(true);
+    expect(restored?.auth?.accessToken).toBeNull();
+    expect(restored?.checkins?.allIds).toEqual(['local_1']);
+    expect(restored?.sync?.ops).toHaveLength(1);
+  });
+
+  it('still wipes the blob when the user deliberately logs out', () => {
+    const store = expiredWithWork();
+
+    store.dispatch(loggedOut());
+    jest.advanceTimersByTime(WRITE_DELAY_MS);
+
+    expect(loadPersistedState()).toBeUndefined();
+  });
+
+  it('hands a different user a blob with nothing of the previous account in it', () => {
+    const store = expiredWithWork();
+
+    // useSignIn.establishSession, previousUserId 'u1' !== incoming 'u2'.
+    store.dispatch(checkInsCleared());
+    store.dispatch(profileReset());
+    store.dispatch(draftCleared());
+    store.dispatch(syncCleared());
+    store.dispatch(tokensRefreshed({ accessToken: 'u2-token' }));
+    store.dispatch(
+      sessionStarted({
+        userId: 'u2',
+        email: 'other@healthtracker.app',
+        accessToken: 'u2-token',
+      }),
+    );
+    jest.advanceTimersByTime(WRITE_DELAY_MS);
+
+    const restored = loadPersistedState();
+    expect(restored?.auth?.userId).toBe('u2');
+    expect(restored?.checkins?.allIds).toEqual([]);
+    expect(restored?.checkins?.byId).toEqual({});
+    expect(restored?.sync?.ops).toEqual([]);
+    expect(restored?.sync?.serverIds).toEqual({});
+    expect(restored?.profile?.baselineWeightKg).toBeNull();
   });
 });

@@ -24,6 +24,10 @@ const fail = (status: number, code: string): { error: FetchBaseQueryError } => (
   error: { status, data: { error: { code, message: 'nope' } } } as FetchBaseQueryError,
 });
 
+const offline = (): { error: FetchBaseQueryError } => ({
+  error: { status: 'FETCH_ERROR', error: 'net down' } as FetchBaseQueryError,
+});
+
 const ok = (data: unknown) => ({ data });
 
 const REFRESHED = {
@@ -168,8 +172,36 @@ describe('when the session is really over', () => {
     const expiry = dispatch.mock.calls.find(
       ([action]) => action.type === sessionExpired.type,
     );
-    expect(expiry?.[0].payload).toMatch(/another device/i);
+    expect(expiry?.[0].payload).toMatch(/session ended/i);
     expect(mockClearRefreshToken).toHaveBeenCalled();
+  });
+
+  it('does not blame another device, since the code cannot tell us that', async () => {
+    respond(
+      fail(401, API_ERROR_CODES.NO_TOKEN),
+      fail(401, API_ERROR_CODES.INVALID_REFRESH_TOKEN),
+    );
+
+    await baseQueryWithReauth('/profile', api(), {});
+
+    const expiry = dispatch.mock.calls.find(
+      ([action]) => action.type === sessionExpired.type,
+    );
+    expect(expiry?.[0].payload).not.toMatch(/another device/i);
+  });
+
+  it('drops a token the server rejected as malformed', async () => {
+    respond(
+      fail(401, API_ERROR_CODES.NO_TOKEN),
+      fail(400, API_ERROR_CODES.VALIDATION_ERROR),
+    );
+
+    await baseQueryWithReauth('/profile', api(), {});
+
+    expect(mockClearRefreshToken).toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith(
+      sessionExpired(expect.stringContaining('session') as unknown as string),
+    );
   });
 
   it('does not call an endpoint that cannot succeed when nothing is stored', async () => {
@@ -181,6 +213,45 @@ describe('when the session is really over', () => {
     expect(refreshCalls()).toHaveLength(0);
     expect(dispatch).toHaveBeenCalledWith(
       sessionExpired(expect.stringContaining('session') as unknown as string),
+    );
+  });
+
+  it('keeps the token when the network drops mid-refresh', async () => {
+    respond(fail(401, API_ERROR_CODES.NO_TOKEN), offline());
+
+    const result = await baseQueryWithReauth('/profile', api(), {});
+
+    expect(mockClearRefreshToken).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: sessionExpired.type }),
+    );
+    expect(result.error).toBeDefined();
+  });
+
+  it('keeps the token when the refresh endpoint itself is broken', async () => {
+    respond(
+      fail(401, API_ERROR_CODES.NO_TOKEN),
+      fail(500, API_ERROR_CODES.INTERNAL_ERROR),
+    );
+
+    await baseQueryWithReauth('/profile', api(), {});
+
+    expect(mockClearRefreshToken).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: sessionExpired.type }),
+    );
+  });
+
+  it('retries the refresh on a later request once the network is back', async () => {
+    respond(fail(401, API_ERROR_CODES.NO_TOKEN), offline());
+    await baseQueryWithReauth('/profile', api(), {});
+
+    respond(fail(401, API_ERROR_CODES.NO_TOKEN), ok(REFRESHED), ok({ back: true }));
+    const result = await baseQueryWithReauth('/profile', api(), {});
+
+    expect(result.data).toEqual({ back: true });
+    expect(dispatch).toHaveBeenCalledWith(
+      tokensRefreshed({ accessToken: 'new-access' }),
     );
   });
 

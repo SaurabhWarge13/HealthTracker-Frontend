@@ -82,7 +82,13 @@ export function VerifyOtpScreen({
         We sent a {OTP_LENGTH}-digit code to {email}.
       </AppText>
 
-      <OtpInput value={code} onChange={handleChange} hasError={hasError} autoFocus />
+      <OtpInput
+        value={code}
+        onChange={handleChange}
+        hasError={hasError}
+        editable={!submitting}
+        autoFocus
+      />
 
       <AppButton
         label="Verify"

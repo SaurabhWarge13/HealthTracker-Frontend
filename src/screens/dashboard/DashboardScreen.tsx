@@ -11,7 +11,6 @@ import {
   Plus,
   Target,
   TrendingUp,
-  TriangleAlert,
 } from 'lucide-react-native';
 import {
   AppButton,
@@ -53,8 +52,6 @@ import {
   selectRecentCheckIns,
   selectTrend,
 } from '@/store/checkins/checkinsSelectors';
-import { runSync } from '@/services/sync';
-import { store } from '@/store/store';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { weightNudgeDismissed } from '@/store/healthConnect/healthConnectSlice';
 import { selectProfile } from '@/store/profile/profileSelectors';
@@ -181,22 +178,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
         />
       ) : null}
 
-      {view.pullFailed ? (
-        <InlineBanner
-          icon={CloudOff}
-          title="Couldn't refresh"
-          detail="Showing your saved check-ins."
-          trailing={
-            <AppButton
-              label={ACTION_LABEL.retry}
-              variant="text"
-              size={32}
-              onPress={() => { runSync(store); }}
-            />
-          }
-        />
-      ) : null}
-
       {view.pendingCount > 0 ? (
         <InlineBanner
           icon={Clock}
@@ -205,26 +186,6 @@ export function DashboardScreen({ navigation }: MainTabScreenProps<'Home'>) {
           } waiting to sync`}
           detail="Saved on device"
           detailPosition="trailing"
-        />
-      ) : null}
-
-      {view.failedCount > 0 ? (
-        <InlineBanner
-          icon={TriangleAlert}
-          tone="device"
-          title={`${view.failedCount} ${
-            view.failedCount === 1 ? 'change' : 'changes'
-          } couldn't sync`}
-          detail="Saved on this device. Open Settings to review."
-          trailing={
-            <AppButton
-              label="Review"
-              variant="text"
-              tone="device"
-              size={32}
-              onPress={openSettingsTab}
-            />
-          }
         />
       ) : null}
 

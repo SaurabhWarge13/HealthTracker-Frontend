@@ -12,7 +12,6 @@ import type { HealthConnectField } from '@/store/healthConnect/healthConnectSlic
 import { useAppSelector } from '@/store/hooks';
 import { selectCheckInsUnsettled } from '@/store/checkins/checkinsSelectors';
 import {
-  selectFailedCount,
   selectFailedEntityIds,
   selectPendingCount,
   selectPendingEntityIds,
@@ -31,10 +30,8 @@ export type DashboardView = {
   showTodayCard: boolean;
   pendingCount: number;
   pendingIds: ReadonlySet<string>;
-  failedCount: number;
   failedIds: ReadonlySet<string>;
   isOffline: boolean;
-  pullFailed: boolean;
   nudge: { weightKg: number; recordedAt: number } | null;
   today: {
     providerIssue: ProviderIssue | null;
@@ -66,12 +63,8 @@ export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
   const loading = useAppSelector(selectCheckInsUnsettled);
   const pendingCount = useAppSelector(selectPendingCount);
   const pendingIds = useAppSelector(selectPendingEntityIds);
-  const failedCount = useAppSelector(selectFailedCount);
   const failedIds = useAppSelector(selectFailedEntityIds);
   const isOffline = useAppSelector(state => !state.connectivity.isOnline);
-  const pullFailed = useAppSelector(
-    state => state.checkins.lastPullFailed && state.connectivity.isOnline,
-  );
   const goals = useAppSelector(state => ({
     steps: state.profile.stepGoal,
     water: state.profile.waterGoalMl,
@@ -148,10 +141,8 @@ export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
       showTodayCard: !notSupported,
       pendingCount,
       pendingIds,
-      failedCount,
       failedIds,
       isOffline,
-      pullFailed,
       nudge,
       today: {
         providerIssue,
@@ -168,7 +159,6 @@ export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
     bmi,
     dismissPrompt,
     entryCount,
-    failedCount,
     failedIds,
     fieldConnection,
     goals.sleep,
@@ -176,7 +166,6 @@ export function useDashboardState({ bmi, entryCount }: Args): DashboardView {
     goals.water,
     hc,
     isOffline,
-    pullFailed,
     loading,
     nudge,
     pendingCount,

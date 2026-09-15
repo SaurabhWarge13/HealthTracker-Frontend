@@ -83,7 +83,7 @@ export function loadPersistedState(): Partial<RootState> | undefined {
 export function clearPersistedState(): void {
   try {
     storage.delete(PERSIST_KEY);
-  } catch {}
+  } catch { }
 }
 
 export function startPersisting(store: AppStore): () => void {
@@ -92,8 +92,7 @@ export function startPersisting(store: AppStore): () => void {
 
   const write = (state: RootState): void => {
     try {
-      const keep =
-        state.auth.hasSession || state.auth.expiredReason !== null;
+      const keep = state.auth.userId !== null;
       if (!keep) {
         clearPersistedState();
         return;
@@ -103,7 +102,7 @@ export function startPersisting(store: AppStore): () => void {
         state: snapshot(state),
       };
       storage.set(PERSIST_KEY, JSON.stringify(envelope));
-    } catch {}
+    } catch { }
   };
 
   const flush = (): void => {

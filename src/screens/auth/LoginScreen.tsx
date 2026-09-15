@@ -115,6 +115,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         returnKeyType="next"
         onSubmitEditing={() => passwordRef.current?.focus()}
         submitBehavior="submit"
+        editable={!submitting}
       />
 
       <ControlledInput
@@ -132,6 +133,7 @@ export function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
         returnKeyType="done"
         onSubmitEditing={handleSubmit(onSubmit)}
         containerStyle={styles.password}
+        editable={!submitting}
       />
 
       <AppButton

@@ -17,6 +17,7 @@ export type OtpInputProps = {
   onChange: (next: string) => void;
   hasError?: boolean;
   autoFocus?: boolean;
+  editable?: boolean;
   onComplete?: (code: string) => void;
   containerStyle?: StyleProp<ViewStyle>;
 };
@@ -28,6 +29,7 @@ export function OtpInput({
   onChange,
   hasError = false,
   autoFocus = false,
+  editable = true,
   onComplete,
   containerStyle,
 }: OtpInputProps) {
@@ -51,6 +53,7 @@ export function OtpInput({
   return (
     <Pressable
       onPress={focus}
+      disabled={!editable}
       accessible={false}
       style={[styles.container, containerStyle]}
     >
@@ -66,7 +69,7 @@ export function OtpInput({
                 styles.box,
                 hasError || active ? styles.boxEmphasis : styles.boxRest,
                 {
-                  backgroundColor: colors.surface,
+                  backgroundColor: editable ? colors.surface : colors.surfaceNeutral,
                   borderColor: hasError
                     ? colors.danger
                     : active
@@ -85,6 +88,7 @@ export function OtpInput({
         ref={inputRef}
         value={value}
         onChangeText={handleChange}
+        editable={editable}
         keyboardType="number-pad"
         maxLength={OTP_LENGTH}
         autoFocus={autoFocus}

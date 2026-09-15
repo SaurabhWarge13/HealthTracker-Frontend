@@ -22,6 +22,15 @@ export const selectFailedCount = createSelector(
   ops => ops.length,
 );
 
+const selectProfileUnsynced = (state: RootState) =>
+  state.profile.pendingSync || state.profile.syncFailed;
+
+export const selectUnsyncedCount = createSelector(
+  selectOps,
+  selectProfileUnsynced,
+  (ops, profileUnsynced) => ops.length + (profileUnsynced ? 1 : 0),
+);
+
 export const selectPendingEntityIds = createSelector(
   selectPendingOps,
   ops => new Set(ops.map(op => op.entityId)),

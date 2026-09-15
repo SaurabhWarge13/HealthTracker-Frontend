@@ -3,11 +3,7 @@ import type {
   FetchArgs,
   FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react';
-import {
-  API_ERROR_CODES,
-  extractServerError,
-  REFRESHABLE_CODES,
-} from '@/domain/api/errors';
+import { extractServerError, REFRESHABLE_CODES } from '@/domain/api/errors';
 import {
   clearRefreshToken,
   getRefreshToken,
@@ -21,9 +17,17 @@ import type { RefreshResponseDto } from './dto';
 type Args = string | FetchArgs;
 type QueryApi = Parameters<BaseQueryFn>[1];
 
-const SIGNED_IN_ELSEWHERE =
-  'You were signed out because your account was used on another device.';
 const SESSION_ENDED = 'Your session ended. Sign in again — nothing on this device is lost.';
+
+/**
+ * A 4xx means the server looked at the token and repudiated it, so it is worth
+ * discarding. `INVALID_REFRESH_TOKEN` alone says nothing about *why* — expiry,
+ * logout, a deleted user, rotation and a sign-in on another device all arrive
+ * under that one code — so the copy stays generic. Anything else (offline,
+ * timeout, 5xx) never reached that verdict; the token may still be good.
+ */
+const wasRepudiated = (error: FetchBaseQueryError): boolean =>
+  typeof error.status === 'number' && error.status >= 400 && error.status < 500;
 
 const urlOf = (args: Args): string => (typeof args === 'string' ? args : args.url);
 
@@ -40,12 +44,13 @@ function shouldAttemptRefresh(args: Args, error: FetchBaseQueryError): boolean {
 
 type RefreshOutcome =
   | { ok: true; accessToken: string }
-  | { ok: false; reason: string };
+  | { ok: false; ended: true; reason: string }
+  | { ok: false; ended: false };
 
 async function performRefresh(api: QueryApi): Promise<RefreshOutcome> {
   const refreshToken = await getRefreshToken();
   if (refreshToken === null) {
-    return { ok: false, reason: SESSION_ENDED };
+    return { ok: false, ended: true, reason: SESSION_ENDED };
   }
 
   const result = await rawBaseQuery(
@@ -59,15 +64,11 @@ async function performRefresh(api: QueryApi): Promise<RefreshOutcome> {
   );
 
   if (result.error !== undefined) {
-    const code = extractServerError(result.error.data)?.code;
+    if (!wasRepudiated(result.error)) {
+      return { ok: false, ended: false };
+    }
     await clearRefreshToken();
-    return {
-      ok: false,
-      reason:
-        code === API_ERROR_CODES.INVALID_REFRESH_TOKEN
-          ? SIGNED_IN_ELSEWHERE
-          : SESSION_ENDED,
-    };
+    return { ok: false, ended: true, reason: SESSION_ENDED };
   }
 
   const data = result.data as RefreshResponseDto;
@@ -103,7 +104,11 @@ export const baseQueryWithReauth: BaseQueryFn<
 
   const outcome = await refreshOnce(api);
   if (!outcome.ok) {
-    api.dispatch(sessionExpired(outcome.reason));
+    // A transient failure leaves the session standing: the caller sees the
+    // original 401 and the next request tries the refresh again.
+    if (outcome.ended) {
+      api.dispatch(sessionExpired(outcome.reason));
+    }
     return result;
   }
 

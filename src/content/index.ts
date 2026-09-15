@@ -10,6 +10,7 @@ export {
   FAILED_LABEL,
   FIELD_LABEL,
   GOAL_LABEL,
+  LOGOUT_TITLE,
   MEASUREMENTS_SUBTITLE,
   MEASUREMENTS_TITLE,
   NEW_CHECKIN,
@@ -19,6 +20,8 @@ export {
   SIGN_IN,
   UNIT,
   deleteCheckInMessage,
+  discardMessage,
+  unsyncedMessage,
 } from './common';
 export {
   CHECKING_LABEL,

@@ -1,5 +1,6 @@
 import { REMINDER_HOUR } from '@/domain/notifications/schedule';
-import type { SyncOpKind } from '@/domain/sync';
+import type { PendingOp, SyncOpKind } from '@/domain/sync';
+import { formatWeightWithUnit } from '@/utils/formatters';
 
 export const APP_VERSION = '1.0.0 (1)';
 
@@ -68,4 +69,29 @@ export const DISCARD_TITLE: Record<SyncOpKind, string> = {
   create: 'Discard this check-in?',
   update: 'Discard this edit?',
   delete: 'Keep this check-in after all?',
+};
+
+export const discardMessage = (op: PendingOp): string => {
+  const before = op.before ?? null;
+
+  if (op.kind === 'create' || before === null) {
+    return "This check-in was never sent, so it will be removed from this device. This can't be undone.";
+  }
+  if (op.kind === 'update') {
+    return `Your changes will be undone and the check-in will go back to ${formatWeightWithUnit(
+      before.weightKg,
+    )}, the version on the server.`;
+  }
+  return 'The check-in was never removed from the server, so it will reappear in your history.';
+};
+
+export const LOGOUT_TITLE = 'Log out?';
+
+export const unsyncedMessage = (count: number, isOnline: boolean): string => {
+  const subject = count === 1 ? '1 change is' : `${count} changes are`;
+  const pronoun = count === 1 ? 'it' : 'they';
+  const prefix = isOnline
+    ? ''
+    : "You're offline, so this can't be saved to your account right now. ";
+  return `${prefix}${subject} still saved only on this device. Logging out erases what is on this device, so ${pronoun} would be lost for good.`;
 };

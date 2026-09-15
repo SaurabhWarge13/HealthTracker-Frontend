@@ -15,6 +15,7 @@ import { sessionStarted, tokensRefreshed } from '@/store/auth/authSlice';
 import { checkInsCleared } from '@/store/checkins/checkinsSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { draftCleared } from '@/store/onboarding/onboardingSlice';
+import { applyAuthProfile } from '@/store/profile/profileCommands';
 import { profileHydrated, profileReset } from '@/store/profile/profileSlice';
 import { syncCleared } from '@/store/sync/syncSlice';
 
@@ -29,6 +30,11 @@ export function useSignIn() {
   const [fetchProfile] = useLazyGetProfileQuery();
   const [submitting, setSubmitting] = useState(false);
 
+  /**
+   * Fallback for a backend that predates `profile` on the auth response. Once
+   * every deployed backend sends the field, this and its `GET /profile` round
+   * trip can go.
+   */
   const hydrateProfile = useCallback(async (): Promise<void> => {
     try {
       const profile = await fetchProfile().unwrap();
@@ -53,7 +59,11 @@ export function useSignIn() {
 
       dispatch(tokensRefreshed({ accessToken: auth.accessToken }));
 
-      await hydrateProfile();
+      if (auth.profile === undefined) {
+        await hydrateProfile();
+      } else {
+        dispatch(applyAuthProfile(auth.profile));
+      }
 
       dispatch(
         sessionStarted({

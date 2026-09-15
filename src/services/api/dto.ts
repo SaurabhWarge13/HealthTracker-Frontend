@@ -20,6 +20,15 @@ export type AuthResponseDto = {
   accessToken: string;
   refreshToken: string;
   user: AuthUserDto;
+  /**
+   * The profile as it exists on the server at sign-in, so the client never has
+   * to make a second request to learn whether to show onboarding.
+   *
+   * - object    — hydrate it
+   * - `null`    — the server has no profile for this user
+   * - `undefined` — the backend predates this field; fall back to `GET /profile`
+   */
+  profile?: ProfileDto | null;
 };
 
 export type SignupResponseDto = { email: string };

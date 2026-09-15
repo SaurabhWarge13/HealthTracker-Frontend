@@ -29,7 +29,7 @@ import { clearRefreshToken } from '@/security/tokenStore';
 import { baseApi } from '@/services/api/baseApi';
 import { useLogoutMutation } from '@/services/api';
 import { openNotificationSettings } from '@/services/notifications';
-import { awaitSyncIdle, runSync } from '@/services/sync';
+import { awaitSyncIdle } from '@/services/sync';
 import { loggedOut } from '@/store/auth/authSlice';
 import {
   ACTION_LABEL,
@@ -41,11 +41,14 @@ import {
   FIELD_LABEL,
   GOAL_LABEL,
   HEALTH_CONNECT_LABEL,
+  LOGOUT_TITLE,
   NOT_SET,
   PROVIDER_ACTION,
   PROVIDER_ISSUE_COPY,
   REMINDER_TIME_LABEL,
   UNIT,
+  discardMessage,
+  unsyncedMessage,
 } from '@/content';
 import {
   disableReminder,
@@ -55,10 +58,9 @@ import {
   selectReminderActive,
   selectReminderBlocked,
 } from '@/store/settings/settingsSelectors';
-import { store } from '@/store/store';
 import {
   selectFailedOps,
-  selectPendingCount,
+  selectUnsyncedCount,
 } from '@/store/sync/syncSelectors';
 import { opRetryRequested } from '@/store/sync/syncSlice';
 import { discardOp } from '@/store/checkins/checkinsCommands';
@@ -83,7 +85,6 @@ import {
   formatTime,
   formatWater,
   formatWeight,
-  formatWeightWithUnit,
 } from '@/utils/formatters';
 import type {
   EditableProfileField,
@@ -122,15 +123,14 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
   );
 
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState<PendingOp | null>(null);
   const [confirmProfileDiscard, setConfirmProfileDiscard] = useState(false);
   const discardProfileEdit = useProfileDiscard();
 
-  const pendingCount = useAppSelector(selectPendingCount);
   const failedOps = useAppSelector(selectFailedOps);
-  const profileUnsynced = profile.pendingSync || profile.syncFailed;
-  const unsyncedCount =
-    pendingCount + failedOps.length + (profileUnsynced ? 1 : 0);
+  const unsyncedCount = useAppSelector(selectUnsyncedCount);
+  const isOnline = useAppSelector(state => state.connectivity.isOnline);
 
   const edit = useCallback(
     (field: EditableProfileField) =>
@@ -140,13 +140,18 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
 
   const signOut = useCallback(async () => {
     setConfirmLogout(false);
-    await awaitSyncIdle();
+    setLoggingOut(true);
     try {
-      await logout().unwrap();
-    } catch {}
-    await clearRefreshToken();
-    dispatch(baseApi.util.resetApiState());
-    dispatch(loggedOut());
+      await awaitSyncIdle();
+      try {
+        await logout().unwrap();
+      } catch {}
+      await clearRefreshToken();
+      dispatch(baseApi.util.resetApiState());
+      dispatch(loggedOut());
+    } finally {
+      setLoggingOut(false);
+    }
   }, [dispatch, logout]);
 
   const handleLogout = useCallback(() => {
@@ -156,19 +161,6 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
     }
     signOut();
   }, [signOut, unsyncedCount]);
-
-  const syncThenLogout = useCallback(async () => {
-    await runSync(store);
-    const state = store.getState();
-    const stillUnsynced =
-      state.sync.ops.length > 0 ||
-      state.profile.pendingSync ||
-      state.profile.syncFailed;
-    if (!stillUnsynced) {
-      signOut();
-      return;
-    }
-  }, [signOut]);
 
   return (
     <AppScreen
@@ -468,21 +460,19 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
           size={52}
           fullWidth
           icon={LogOut}
+          loading={loggingOut}
+          disabled={loggingOut}
           onPress={handleLogout}
         />
       </View>
 
       <AppDialog
         visible={confirmLogout}
-        icon={Clock}
-        title="Sync before you log out"
-        message={`${unsyncedCount} ${unsyncedCount === 1 ? 'change is' : 'changes are'
-          } still saved only on this device. Logging out erases what is on this device, so ${unsyncedCount === 1 ? 'it' : 'they'
-          } would be lost for good.`}
-        layout="stacked"
-        confirm={{ label: 'Try sync again', onPress: () => { syncThenLogout(); } }}
-        secondary={{
-          label: 'Log out & discard',
+        icon={TriangleAlert}
+        title={LOGOUT_TITLE}
+        message={unsyncedMessage(unsyncedCount, isOnline)}
+        confirm={{
+          label: 'Log out',
           destructive: true,
           onPress: () => { signOut(); },
         }}
@@ -526,20 +516,6 @@ export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
       />
     </AppScreen>
   );
-}
-
-function discardMessage(op: PendingOp): string {
-  const before = op.before ?? null;
-
-  if (op.kind === 'create' || before === null) {
-    return "This check-in was never sent, so it will be removed from this device. This can't be undone.";
-  }
-  if (op.kind === 'update') {
-    return `Your changes will be undone and the check-in will go back to ${formatWeightWithUnit(
-      before.weightKg,
-    )}, the version on the server.`;
-  }
-  return 'The check-in was never removed from the server, so it will reappear in your history.';
 }
 
 const styles = StyleSheet.create({
