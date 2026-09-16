@@ -9,12 +9,10 @@ import {
   transientFailuresRevived,
   opStarted,
   opSucceeded,
-  staleServerIdsPruned,
   syncCleared,
   syncReducer,
   type SyncState,
 } from '@/store/sync/syncSlice';
-import { resolveServerId } from '@/store/sync/syncSelectors';
 import type { CheckIn } from '@/domain/checkins/types';
 
 const checkIn = (id: string, weightKg = 72): CheckIn => ({
@@ -88,22 +86,17 @@ describe('opEnqueued', () => {
 });
 
 describe('op lifecycle', () => {
-  it('records the server id without touching the local one', () => {
-    const created = op('create', 'local_1', checkIn('local_1'));
+  it('clears the op and records when it landed', () => {
+    // There is no server id to learn: the id the client sent is the row's id.
+    const created = op('create', 'ck_1', checkIn('ck_1'));
     const state = reduce(
       initialSyncState,
       opEnqueued(created),
       opStarted(created.opId),
-      opSucceeded({
-        opId: created.opId,
-        entityId: 'local_1',
-        serverId: 'srv_9',
-        at: 5_000,
-      }),
+      opSucceeded({ opId: created.opId, at: 5_000 }),
     );
 
     expect(state.ops).toHaveLength(0);
-    expect(state.serverIds).toEqual({ local_1: 'srv_9' });
     expect(state.lastSyncedAt).toBe(5_000);
     expect(state.inFlightOpId).toBeNull();
   });
@@ -209,125 +202,5 @@ describe('op lifecycle', () => {
       syncCleared(),
     );
     expect(state).toEqual(initialSyncState);
-  });
-});
-
-describe('staleServerIdsPruned', () => {
-  const mapped = (serverIds: Record<string, string>): SyncState => ({
-    ...initialSyncState,
-    serverIds,
-  });
-
-  it('drops a mapping whose row the server no longer lists', () => {
-    const state = reduce(
-      mapped({ local_1: 'srv_9' }),
-      staleServerIdsPruned({ keep: [] }),
-    );
-    expect(state.serverIds).toEqual({});
-  });
-
-  it('keeps a mapping for a row the server still lists', () => {
-    const state = reduce(
-      mapped({ local_1: 'srv_9' }),
-      staleServerIdsPruned({ keep: ['local_1'] }),
-    );
-    expect(state.serverIds).toEqual({ local_1: 'srv_9' });
-  });
-
-  it('keeps a mapping a pending delete still needs', () => {
-    const state = reduce(
-      mapped({ local_1: 'srv_9' }),
-      opEnqueued(op('delete', 'local_1')),
-      staleServerIdsPruned({ keep: [] }),
-    );
-    expect(state.serverIds).toEqual({ local_1: 'srv_9' });
-  });
-
-  it('keeps a mapping a failed delete still needs', () => {
-    const queued = op('delete', 'local_1');
-    const state = reduce(
-      mapped({ local_1: 'srv_9' }),
-      opEnqueued(queued),
-      opFailed({ opId: queued.opId, message: 'nope', kind: 'server' }),
-      staleServerIdsPruned({ keep: [] }),
-    );
-    expect(state.serverIds).toEqual({ local_1: 'srv_9' });
-  });
-
-  it('keeps a mapping an in-flight delete still needs', () => {
-    const queued = op('delete', 'local_1');
-    const state = reduce(
-      mapped({ local_1: 'srv_9' }),
-      opEnqueued(queued),
-      opStarted(queued.opId),
-      staleServerIdsPruned({ keep: [] }),
-    );
-    expect(state.inFlightOpId).toBe(queued.opId);
-    expect(state.serverIds).toEqual({ local_1: 'srv_9' });
-  });
-
-  it('keeps mappings pending updates and creates still need', () => {
-    const state = reduce(
-      mapped({ local_1: 'srv_9', local_2: 'srv_8' }),
-      opEnqueued(op('update', 'local_1', checkIn('local_1'))),
-      opEnqueued(op('create', 'local_2', checkIn('local_2'))),
-      staleServerIdsPruned({ keep: [] }),
-    );
-    expect(state.serverIds).toEqual({ local_1: 'srv_9', local_2: 'srv_8' });
-  });
-
-  it('drops a self-mapping even while the row is live', () => {
-    const state = reduce(
-      mapped({ srv_9: 'srv_9' }),
-      staleServerIdsPruned({ keep: ['srv_9'] }),
-    );
-    expect(state.serverIds).toEqual({});
-  });
-
-  it('leaves a local-keyed self-mapping alone', () => {
-    const state = reduce(
-      mapped({ local_1: 'local_1' }),
-      staleServerIdsPruned({ keep: ['local_1'] }),
-    );
-    expect(state.serverIds).toEqual({ local_1: 'local_1' });
-  });
-
-  it('prunes only what is dead, in a mixed map', () => {
-    const state = reduce(
-      mapped({
-        local_1: 'srv_9',
-        local_2: 'srv_8',
-        local_3: 'srv_7',
-        srv_6: 'srv_6',
-      }),
-      opEnqueued(op('delete', 'local_2')),
-      staleServerIdsPruned({ keep: ['local_1', 'srv_6'] }),
-    );
-    expect(state.serverIds).toEqual({ local_1: 'srv_9', local_2: 'srv_8' });
-  });
-
-  it('touches nothing else on the slice', () => {
-    const queued = op('delete', 'local_1');
-    const state = reduce(
-      { ...mapped({ local_1: 'srv_9' }), lastSyncedAt: 4_000 },
-      opEnqueued(queued),
-      staleServerIdsPruned({ keep: [] }),
-    );
-    expect(state.ops).toHaveLength(1);
-    expect(state.lastSyncedAt).toBe(4_000);
-  });
-});
-
-describe('resolveServerId', () => {
-  it('maps a local id through to its server id', () => {
-    expect(resolveServerId('local_1', { local_1: 'srv_9' })).toBe('srv_9');
-  });
-
-  it('uses a server-originated id as-is', () => {
-    expect(resolveServerId('srv_3', {})).toBe('srv_3');
-  });
-
-  it('refuses to guess for an unsynced local id', () => {
-    expect(resolveServerId('local_2', {})).toBeNull();
   });
 });

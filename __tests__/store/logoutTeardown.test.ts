@@ -10,7 +10,7 @@ import { stepEntered } from '@/store/onboarding/onboardingSlice';
 import { profileCompleted } from '@/store/profile/profileSlice';
 import { reminderEnabledChanged } from '@/store/settings/settingsSlice';
 import { createAppStore } from '@/store/store';
-import { opEnqueued, serverIdsRecorded } from '@/store/sync/syncSlice';
+import { opEnqueued } from '@/store/sync/syncSlice';
 import { makePendingOp } from '@/domain/sync';
 import type { CheckIn } from '@/domain/checkins/types';
 
@@ -49,7 +49,6 @@ const populatedStore = () => {
   store.dispatch(
     checkInsReplaced({ entries: [checkIn('local_1')], at: 1_000 }),
   );
-  store.dispatch(serverIdsRecorded({ local_1: 'srv_1' }));
   store.dispatch(
     opEnqueued(makePendingOp('op_1', 'create', 'local_1', checkIn('local_1'), 1)),
   );
@@ -77,7 +76,6 @@ describe('loggedOut tears down every account-scoped slice', () => {
     const before = store.getState();
     expect(before.checkins.allIds).toHaveLength(1);
     expect(before.sync.ops).toHaveLength(1);
-    expect(before.sync.serverIds).not.toEqual({});
     expect(before.profile.baselineWeightKg).toBe(80);
     expect(before.onboarding.step).toBe(2);
     expect(before.settings.reminderEnabled).toBe(true);
@@ -88,7 +86,6 @@ describe('loggedOut tears down every account-scoped slice', () => {
     expect(after.checkins.allIds).toEqual([]);
     expect(after.checkins.byId).toEqual({});
     expect(after.sync.ops).toEqual([]);
-    expect(after.sync.serverIds).toEqual({});
     expect(after.profile.baselineWeightKg).toBeNull();
     expect(after.profile.name).toBe('');
     expect(after.onboarding.step).toBe(1);

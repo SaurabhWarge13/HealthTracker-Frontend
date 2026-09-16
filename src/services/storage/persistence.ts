@@ -12,7 +12,10 @@ import { storage } from './mmkv';
 
 const PERSIST_KEY = 'state:v1';
 
-const SCHEMA_VERSION = 1;
+// v2: check-in ids became client-generated, so the old `local_*` ids and the
+// `sync.serverIds` map they needed are meaningless. A stored v1 blob is dropped
+// rather than migrated — the ids in it no longer address anything on the server.
+export const SCHEMA_VERSION = 2;
 
 const WRITE_DELAY_MS = 250;
 

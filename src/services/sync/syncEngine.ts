@@ -15,19 +15,17 @@ import {
   checkInsReplaced,
 } from '@/store/checkins/checkinsSlice';
 import { profileSyncFailed, profileSynced } from '@/store/profile/profileSlice';
-import { resolveServerId, selectNextDueOp } from '@/store/sync/syncSelectors';
+import { selectNextDueOp } from '@/store/sync/syncSelectors';
 import {
   inFlightCleared,
   opFailed,
   opRetryScheduled,
   opStarted,
   opSucceeded,
-  serverIdsRecorded,
-  staleServerIdsPruned,
 } from '@/store/sync/syncSlice';
 import type { AppStore } from '@/store/store';
 
-type SendResult = { ok: true; serverId?: string } | { ok: false; error: unknown };
+type SendResult = { ok: true } | { ok: false; error: unknown };
 
 async function upsert(store: AppStore, payload: CheckIn): Promise<SendResult> {
   const request = store.dispatch(
@@ -35,17 +33,14 @@ async function upsert(store: AppStore, payload: CheckIn): Promise<SendResult> {
   );
   try {
     const result = await request;
-    return 'error' in result
-      ? { ok: false, error: result.error }
-      : { ok: true, serverId: result.data.id };
+    return 'error' in result ? { ok: false, error: result.error } : { ok: true };
   } finally {
     request.reset();
   }
 }
 
 async function send(store: AppStore, op: PendingOp): Promise<SendResult> {
-  const { dispatch, getState } = store;
-  const serverIds = getState().sync.serverIds;
+  const { dispatch } = store;
 
   if (op.kind === 'create') {
     if (op.payload === null) {
@@ -54,11 +49,11 @@ async function send(store: AppStore, op: PendingOp): Promise<SendResult> {
     return upsert(store, op.payload);
   }
 
-  const serverId = resolveServerId(op.entityId, serverIds);
-
+  // The entity id is the server's id: the client minted it and the server
+  // stored it as the primary key. Nothing to resolve.
   if (op.kind === 'delete') {
     const request = dispatch(
-      checkInsApi.endpoints.deleteCheckIn.initiate(serverId ?? op.entityId),
+      checkInsApi.endpoints.deleteCheckIn.initiate(op.entityId),
     );
     try {
       const result = await request;
@@ -78,12 +73,11 @@ async function send(store: AppStore, op: PendingOp): Promise<SendResult> {
     return { ok: true };
   }
 
-  if (serverId === null) {
-    return upsert(store, op.payload);
-  }
-
   const request = dispatch(
-    checkInsApi.endpoints.updateCheckIn.initiate({ serverId, checkIn: op.payload }),
+    checkInsApi.endpoints.updateCheckIn.initiate({
+      id: op.entityId,
+      checkIn: op.payload,
+    }),
   );
   let updateError: unknown;
   try {
@@ -96,6 +90,8 @@ async function send(store: AppStore, op: PendingOp): Promise<SendResult> {
     request.reset();
   }
 
+  // The row is not there — it was never pushed, or the server lost it. POST
+  // recreates it under the same id, so the client's view stays correct.
   if (normalizeError(updateError).kind === 'notFound') {
     return upsert(store, op.payload);
   }
@@ -117,15 +113,7 @@ async function runOp(store: AppStore, op: PendingOp): Promise<boolean> {
   }
 
   if (result.ok) {
-    store.dispatch(
-      opSucceeded({
-        opId: op.opId,
-        entityId: op.entityId,
-        serverId: result.serverId,
-        at: Date.now(),
-        forget: op.kind === 'delete',
-      }),
-    );
+    store.dispatch(opSucceeded({ opId: op.opId, at: Date.now() }));
     return true;
   }
 
@@ -236,28 +224,9 @@ async function runPull(store: AppStore): Promise<void> {
   const server = data.map(toCheckIn);
   const state = getState();
 
-  const identities: Record<string, string> = {};
-  for (const row of data) {
-    const localId =
-      typeof row.clientId === 'string' && row.clientId !== '' ? row.clientId : row.id;
-    if (localId !== row.id && state.sync.serverIds[localId] === undefined) {
-      identities[localId] = row.id;
-    }
-  }
-  const serverIds =
-    Object.keys(identities).length > 0
-      ? { ...state.sync.serverIds, ...identities }
-      : state.sync.serverIds;
-
-  if (Object.keys(identities).length > 0) {
-    dispatch(serverIdsRecorded(identities));
-  }
-
-  const entries = reconcileCheckIns({ server, ops: state.sync.ops, serverIds });
+  const entries = reconcileCheckIns({ server, ops: state.sync.ops });
 
   dispatch(checkInsReplaced({ entries, at: Date.now() }));
-
-  dispatch(staleServerIdsPruned({ keep: entries.map(entry => entry.id) }));
 }
 
 export async function pushProfile(store: AppStore): Promise<void> {

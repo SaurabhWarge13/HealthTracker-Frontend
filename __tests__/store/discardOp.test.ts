@@ -6,7 +6,6 @@ import {
   updateCheckIn,
 } from '@/store/checkins/checkinsCommands';
 import { checkInsReplaced } from '@/store/checkins/checkinsSlice';
-import { serverIdsRecorded } from '@/store/sync/syncSlice';
 import type { CheckIn } from '@/domain/checkins/types';
 import type { CheckInDraft } from '@/domain/checkins/types';
 
@@ -30,7 +29,6 @@ const server = (id: string, weightKg: number): CheckIn => ({
 const withSynced = (entry: CheckIn) => {
   const store = createAppStore();
   store.dispatch(checkInsReplaced({ entries: [entry], at: 1_000 }));
-  store.dispatch(serverIdsRecorded({ [entry.id]: entry.id }));
   return store;
 };
 

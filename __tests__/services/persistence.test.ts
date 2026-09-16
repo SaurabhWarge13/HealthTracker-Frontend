@@ -2,6 +2,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 import {
   clearPersistedState,
   loadPersistedState,
+  SCHEMA_VERSION,
   startPersisting,
   storage,
 } from '@/services/storage';
@@ -25,7 +26,6 @@ import {
 import { createAppStore } from '@/store/store';
 import {
   opEnqueued,
-  serverIdsRecorded,
   syncCleared,
 } from '@/store/sync/syncSlice';
 import { makePendingOp } from '@/domain/sync';
@@ -77,7 +77,10 @@ describe('loadPersistedState', () => {
   });
 
   it('drops state written by an older schema', () => {
-    storage.set(PERSIST_KEY, JSON.stringify({ version: 0, state: { profile: {} } }));
+    storage.set(
+      PERSIST_KEY,
+      JSON.stringify({ version: SCHEMA_VERSION - 1, state: { profile: {} } }),
+    );
     expect(loadPersistedState()).toBeUndefined();
   });
 
@@ -85,7 +88,7 @@ describe('loadPersistedState', () => {
     storage.set(
       PERSIST_KEY,
       JSON.stringify({
-        version: 1,
+        version: SCHEMA_VERSION,
         state: {
           auth: { hasSession: true },
           sync: {
@@ -122,7 +125,7 @@ describe('loadPersistedState', () => {
     storage.set(
       PERSIST_KEY,
       JSON.stringify({
-        version: 1,
+        version: SCHEMA_VERSION,
         state: {
           auth: { hasSession: true },
           sync: { ops: [], serverIds: {}, inFlightOpId: null, lastSyncedAt: null },
@@ -139,11 +142,11 @@ describe('loadPersistedState', () => {
     expect(store.getState().settings.notificationsPermitted).toBe(false);
   });
 
-  it('restores the mappings a queued op still depends on', () => {
+  it('restores a queued op under the id the client gave it', () => {
     storage.set(
       PERSIST_KEY,
       JSON.stringify({
-        version: 1,
+        version: SCHEMA_VERSION,
         state: {
           auth: { hasSession: true },
           sync: {
@@ -162,7 +165,6 @@ describe('loadPersistedState', () => {
                 before: null,
               },
             ],
-            serverIds: { local_1: 'srv_9' },
             inFlightOpId: null,
             lastSyncedAt: null,
           },
@@ -172,7 +174,6 @@ describe('loadPersistedState', () => {
 
     const store = createAppStore(loadPersistedState());
 
-    expect(store.getState().sync.serverIds).toEqual({ local_1: 'srv_9' });
     expect(store.getState().sync.ops).toHaveLength(1);
     expect(store.getState().sync.ops[0].entityId).toBe('local_1');
   });
@@ -181,7 +182,7 @@ describe('loadPersistedState', () => {
     storage.set(
       PERSIST_KEY,
       JSON.stringify({
-        version: 1,
+        version: SCHEMA_VERSION,
         state: { auth: { hasSession: true }, sync: { serverIds: {} } },
       }),
     );
@@ -193,7 +194,7 @@ describe('loadPersistedState', () => {
     storage.set(
       PERSIST_KEY,
       JSON.stringify({
-        version: 1,
+        version: SCHEMA_VERSION,
         state: {
           auth: { hasSession: true },
           profile: { name: 'Sam', baselineWeightKg: 76.5 },
@@ -215,7 +216,7 @@ describe('loadPersistedState', () => {
     storage.set(
       PERSIST_KEY,
       JSON.stringify({
-        version: 1,
+        version: SCHEMA_VERSION,
         state: {
           auth: { hasSession: true },
           profile: {
@@ -392,7 +393,6 @@ describe('session expiry never costs the user their offline work', () => {
     startPersisting(store);
     store.dispatch(signIn);
     store.dispatch(checkInsReplaced({ entries: [checkIn], at: 1 }));
-    store.dispatch(serverIdsRecorded({ local_1: 'srv_1' }));
     store.dispatch(
       opEnqueued(makePendingOp('op_1', 'create', 'local_1', checkIn, 1)),
     );
@@ -442,7 +442,6 @@ describe('session expiry never costs the user their offline work', () => {
     const restored = loadPersistedState();
     expect(restored?.checkins?.byId.local_1?.weightKg).toBe(72);
     expect(restored?.sync?.ops[0]?.entityId).toBe('local_1');
-    expect(restored?.sync?.serverIds).toEqual({ local_1: 'srv_1' });
     expect(restored?.auth?.userId).toBe('u1');
   });
 
@@ -511,7 +510,6 @@ describe('session expiry never costs the user their offline work', () => {
     expect(restored?.checkins?.allIds).toEqual([]);
     expect(restored?.checkins?.byId).toEqual({});
     expect(restored?.sync?.ops).toEqual([]);
-    expect(restored?.sync?.serverIds).toEqual({});
     expect(restored?.profile?.baselineWeightKg).toBeNull();
   });
 });

@@ -93,7 +93,6 @@ type ServerSource = 'manual' | 'health_connect';
 
 export type CheckInDto = {
   id: string;
-  clientId?: string | null;
   weightKg: number;
   heightCm: number | null;
   sleepMinutes: number | null;
@@ -151,7 +150,7 @@ export function toCheckIn(dto: CheckInDto): CheckIn {
 
 export function toCheckInBody(checkIn: CheckIn): Record<string, unknown> {
   return withoutNulls({
-    clientId: checkIn.id,
+    id: checkIn.id,
     weightKg: checkIn.weightKg,
     heightCm: checkIn.heightCm,
     sleepMinutes: checkIn.sleepMinutes,

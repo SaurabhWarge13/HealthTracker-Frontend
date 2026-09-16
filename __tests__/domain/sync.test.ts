@@ -175,7 +175,6 @@ describe('reconcileCheckIns — the function that makes a refetch safe', () => {
     const result = reconcileCheckIns({
       server: [checkIn('s1'), checkIn('s2')],
       ops: [],
-      serverIds: {},
     });
     expect(result.map(entry => entry.id).sort()).toEqual(['s1', 's2']);
   });
@@ -185,7 +184,6 @@ describe('reconcileCheckIns — the function that makes a refetch safe', () => {
     const result = reconcileCheckIns({
       server: [checkIn('s1')],
       ops: [op('create', 'local_1', local)],
-      serverIds: {},
     });
 
     expect(result.map(entry => entry.id).sort()).toEqual(['local_1', 's1']);
@@ -195,7 +193,6 @@ describe('reconcileCheckIns — the function that makes a refetch safe', () => {
     const result = reconcileCheckIns({
       server: [checkIn('s1', 72)],
       ops: [op('update', 's1', checkIn('s1', 70))],
-      serverIds: {},
     });
     expect(result[0].weightKg).toBe(70);
   });
@@ -204,27 +201,27 @@ describe('reconcileCheckIns — the function that makes a refetch safe', () => {
     const result = reconcileCheckIns({
       server: [checkIn('s1'), checkIn('s2')],
       ops: [op('delete', 's1')],
-      serverIds: {},
     });
     expect(result.map(entry => entry.id)).toEqual(['s2']);
   });
 
-  it('does not duplicate a synced check-in under both its ids', () => {
+  it('does not duplicate a row the client both holds and has queued', () => {
+    // Client and server share one id namespace, so a pending edit lands on the
+    // same map key as the server's copy rather than beside it.
     const result = reconcileCheckIns({
-      server: [checkIn('srv_9', 70)],
-      ops: [],
-      serverIds: { local_1: 'srv_9' },
+      server: [checkIn('ck_1', 70)],
+      ops: [op('update', 'ck_1', checkIn('ck_1', 72))],
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe('local_1');
-    expect(result[0].weightKg).toBe(70);
+    expect(result[0].id).toBe('ck_1');
+    expect(result[0].weightKg).toBe(72);
   });
 
   it('returns newest first, matching the read path', () => {
     const older = { ...checkIn('a'), createdAt: 1 };
     const newer = { ...checkIn('b'), createdAt: 2 };
-    const result = reconcileCheckIns({ server: [older, newer], ops: [], serverIds: {} });
+    const result = reconcileCheckIns({ server: [older, newer], ops: [] });
     expect(result.map(entry => entry.id)).toEqual(['b', 'a']);
   });
 });

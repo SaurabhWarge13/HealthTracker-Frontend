@@ -4,23 +4,14 @@ import type { PendingOp } from './types';
 export type ReconcileArgs = {
   server: readonly CheckIn[];
   ops: readonly PendingOp[];
-  serverIds: Readonly<Record<string, string>>;
 };
 
-export function reconcileCheckIns({
-  server,
-  ops,
-  serverIds,
-}: ReconcileArgs): CheckIn[] {
-  const localByServer = new Map<string, string>();
-  for (const [localId, serverId] of Object.entries(serverIds)) {
-    localByServer.set(serverId, localId);
-  }
-
+export function reconcileCheckIns({ server, ops }: ReconcileArgs): CheckIn[] {
+  // Server rows and pending ops share one id namespace — the client minted it —
+  // so they collide in this map by construction and a row cannot appear twice.
   const merged = new Map<string, CheckIn>();
   for (const entry of server) {
-    const localId = localByServer.get(entry.id) ?? entry.id;
-    merged.set(localId, localId === entry.id ? entry : { ...entry, id: localId });
+    merged.set(entry.id, entry);
   }
 
   for (const op of ops) {

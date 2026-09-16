@@ -1,5 +1,4 @@
 import { createSelector } from '@reduxjs/toolkit';
-import { isLocalId } from '@/utils/uuid';
 import type { RootState } from '@/store/rootReducer';
 
 const selectOps = (state: RootState) => state.sync.ops;
@@ -53,14 +52,3 @@ export const selectNextAttemptAt = createSelector(selectPendingOps, ops => {
   const times = ops.map(op => op.nextAttemptAt);
   return times.length > 0 ? Math.min(...times) : null;
 });
-
-export const resolveServerId = (
-  entityId: string,
-  serverIds: Readonly<Record<string, string>>,
-): string | null => {
-  const mapped = serverIds[entityId];
-  if (mapped !== undefined) {
-    return mapped;
-  }
-  return isLocalId(entityId) ? null : entityId;
-};

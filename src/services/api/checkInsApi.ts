@@ -17,15 +17,15 @@ export const checkInsApi = baseApi.injectEndpoints({
         body: toCheckInBody(checkIn),
       }),
     }),
-    updateCheckIn: builder.mutation<CheckInDto, { serverId: string; checkIn: CheckIn }>({
-      query: ({ serverId, checkIn }) => ({
-        url: API_PATHS.CHECKIN(serverId),
+    updateCheckIn: builder.mutation<CheckInDto, { id: string; checkIn: CheckIn }>({
+      query: ({ id, checkIn }) => ({
+        url: API_PATHS.CHECKIN(id),
         method: 'PUT',
         body: toCheckInBody(checkIn),
       }),
     }),
     deleteCheckIn: builder.mutation<void, string>({
-      query: serverId => ({ url: API_PATHS.CHECKIN(serverId), method: 'DELETE' }),
+      query: id => ({ url: API_PATHS.CHECKIN(id), method: 'DELETE' }),
     }),
   }),
 });
